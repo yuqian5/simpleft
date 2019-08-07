@@ -1,4 +1,4 @@
-#include <cstring>
+#include <iostream>
 #pragma once
 
 // struct which stores all info pass from commandline
