@@ -2,6 +2,9 @@
 #include <cstring>
 #include <stdexcept>
 #include <regex>
+
+#include "TX.h"
+#include "RX.h"
 using namespace std;
 
 #include "mystruct.h"
@@ -37,7 +40,7 @@ int checkPort(const string& port_str){
 // check IP addr, if valid, return true, else print error and exit
 bool checkIP(const string& IP_str){
     try{
-        if (regex_match(IP_str, std::regex(R"((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b)"))){ // valid ip
+        if (regex_match(IP_str, std::regex("\\b(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\b"))){ // validate ip
             return true;
         }
         throw std::domain_error("IP address inputted not valid");
@@ -86,10 +89,10 @@ int main(int argc, char* argv[]) {
 
     if(info.mode == 1){
         cout << "Receiving on port " << info.port << endl;
-        //TODO init class TX and pass CMDARGS to it
+        RX rx(info);
     }else{
         cout << "Sending to " << info.ip << " on port " << info.port << endl;
-        //TODO init class RX and pass CMDARGS to it
+        TX tx(info);
     }
 
     return 0;
