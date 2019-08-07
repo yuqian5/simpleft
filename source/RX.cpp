@@ -34,13 +34,12 @@ void RX::socketSetup() {
 
     //accept
     socklen_t addr_size = sizeof receive_storage;
-    if(accept(rxSocket, (struct sockaddr *)&receive_storage, &addr_size) != 0){
-        std::cerr << "accept failed" << std::endl;
-        exit(1);
-    }
-
+    newRxSocket = accept(rxSocket, (struct sockaddr *)&receive_storage, &addr_size);
     std::cout << "Socket Connected" << std::endl;
+}
 
-    //TODO: recieve stuff here
-
+void RX::receive() {
+    char a[1000];
+    read(newRxSocket, a, sizeof(a));
+    cout << a << endl;
 }

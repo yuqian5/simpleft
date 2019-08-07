@@ -26,7 +26,7 @@ public:
 
 private:
     CMDARGS info;
-    int rxSocket;
+    int rxSocket, newRxSocket;
     struct sockaddr_in address;
     struct sockaddr_storage receive_storage;
 

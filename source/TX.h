@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <utility>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 using namespace std;
 
 #include "mystruct.h"
@@ -15,20 +16,19 @@ public:
         // copy commandline arguments
         info = std::move(cmd);
 
-        //init socket
-        txSocket = socket(AF_INET, SOCK_STREAM, 0);
-        main();
+        socketSetup();
+        transmit();
     }
-    ~TX()= default;
+    ~TX(){
+        close(txSocket);
+    }
 
 private:
     CMDARGS info;
     int txSocket;
+    struct sockaddr_in address;
 
-
-    int main();
-    int send();
-    int pack();
-    int getFile();
+    void socketSetup();
+    void transmit();
 };
 
