@@ -85,8 +85,10 @@ CMDARGS usrInputValid(char* cmd[], int argc){
 }
 
 int main(int argc, char* argv[]) {
+    //get and sanitize cmd arguments store in struct CMDARGS
     CMDARGS info = usrInputValid(argv, argc);
 
+    //mode 1 = rx, 2 = tx
     if(info.mode == 1){
         cout << "Receiving on port " << info.port << endl;
         RX rx(info);

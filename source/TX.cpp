@@ -1,6 +1,5 @@
 #include "TX.h"
 #include <netdb.h>
-#include <string.h>
 
 
 void TX::socketSetup() {
@@ -27,10 +26,59 @@ void TX::socketSetup() {
 }
 
 void TX::transmit() {
-    char *hello = "Hello from client";
-    char buffer[1024] = {0};
+    int fdin;
+    string fileName = "testFile.txt";
+    cout << "Title: " << fileName << endl;
 
-    send(txSocket , hello , strlen(hello) , 0 );
+    struct stat fileInfo;
+    if (stat(fileName.c_str(), &fileInfo) == 0) {
+        cout << "File Size: " << fileInfo.st_size << endl;
+
+        fdin = open(fileName.c_str(), O_RDONLY);
+        if(fdin == -1){
+            std::cerr << "an error occurred while opening file " << errno << std::endl;
+            exit(1);
+        }
+    }else{
+        std::cerr << "cannot get file info" << std::endl;
+        exit(1);
+    }
+
+    //send filename
+    send(txSocket, fileName.c_str(), strlen(fileName.c_str()), 0);
+    usleep(200);
+
+    //send filesize
+    send(txSocket, to_string(fileInfo.st_size).c_str(), strlen(to_string(fileInfo.st_size).c_str()), 0);
+    usleep(200);
+
+    //send sha256 sum
+    char buffer[256];
+    string result;
+    string cmd = "shasum -a 256 ";
+    cmd += fileName;
+    FILE* pipe = popen(cmd.c_str() , "r");
+
+    if(!pipe){
+        throw std::runtime_error("popen() failed!");
+    }
+
+    fgets(buffer, sizeof(buffer), pipe);
+    result += buffer;
+    pclose(pipe);
+    std::cout << "SHA256 SUM: " << result << std::endl;
+    send(txSocket, result.c_str(), strlen(result.c_str()), 0);
+    usleep(200);
+
+
+    //send file
+    char toSend[2048];
+    while(read(fdin, toSend, 2048)){
+        send(txSocket, toSend, strlen(toSend), 0);
+
+        memset(toSend, 0, sizeof(toSend));
+    }
+    close(fdin);
 }
 
 

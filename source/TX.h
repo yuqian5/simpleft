@@ -6,6 +6,9 @@
 #include <utility>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <cstring>
+#include <sys/stat.h>
+#include <fcntl.h>
 using namespace std;
 
 #include "mystruct.h"
@@ -20,7 +23,7 @@ public:
         transmit();
     }
     ~TX(){
-        close(txSocket);
+        shutdown(txSocket, 0);
     }
 
 private:
@@ -28,7 +31,7 @@ private:
     int txSocket;
     struct sockaddr_in address;
 
-    void socketSetup();
+    void socketSetup(); // setup and connect to RX side
     void transmit();
 };
 

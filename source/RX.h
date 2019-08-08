@@ -6,6 +6,10 @@
 #include <utility>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <sys/types.h>
+#include <cstring>
+#include <sys/stat.h>
+#include <fcntl.h>
 using namespace std;
 
 #include "mystruct.h"
@@ -21,7 +25,8 @@ public:
     }
 
     ~RX(){
-        close(rxSocket);
+        shutdown(rxSocket, 0);
+        shutdown(newRxSocket, 0);
     }
 
 private:
@@ -31,6 +36,7 @@ private:
     struct sockaddr_storage receive_storage;
 
 
-    void socketSetup();
+    void socketSetup(); // setup, then listen and accept connection from TX side
     void receive();
+    static bool verify(string fileName, string shasum);
 };

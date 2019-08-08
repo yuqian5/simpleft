@@ -39,7 +39,76 @@ void RX::socketSetup() {
 }
 
 void RX::receive() {
-    char a[1000];
-    read(newRxSocket, a, sizeof(a));
-    cout << a << endl;
+    string title;
+    int fileSize = 0;
+    string shasum;
+    char newMsg[2048];
+
+    //get title
+    recv(newRxSocket, newMsg, sizeof(newMsg), 0);
+    title = newMsg;
+    memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
+
+    //get file size
+    recv(newRxSocket, newMsg, sizeof(newMsg), 0);
+    try{fileSize = stoi(newMsg, nullptr, 10);}
+    catch(invalid_argument &e){std::cerr << "size error: " << e.what() << std::endl;exit(1);}
+    memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
+
+    //get sha265 sum
+    recv(newRxSocket, newMsg, sizeof(newMsg), 0);
+    shasum = newMsg;
+    memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
+
+    cout << "Title: " << title << endl;
+    cout << "File Size: " << fileSize << endl;
+    cout << "SHA265 Sum: " << shasum << endl;
+
+    int fdout = open(title.c_str(), O_CREAT|O_WRONLY);
+    if(!fdout){
+        std::cerr << "File cannot be created" << std::endl;
+        exit(1);
+    }
+
+    while (true) {
+        //no more message if recvRET become 0, stop receiving
+        int recvRET = recv(newRxSocket, newMsg, sizeof(newMsg), 0);
+
+        if(recvRET == 0){
+            break;
+        }
+
+        write(fdout, newMsg, sizeof(newMsg));
+
+        memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
+    }
+
+    if(verify(title, shasum)){
+        cout << "File Received and Verified" << endl;
+    }else{
+        cout << "File was received but cannot be verified" << endl;
+    }
+}
+
+bool RX::verify(const string fileName, const string shasum) {
+    //check shasum
+    char buffer[256];
+    string result;
+    string cmd = "shasum -a 256 ";
+    cmd += fileName;
+    FILE* pipe = popen(cmd.c_str() , "r");
+    if(!pipe){
+        throw std::runtime_error("popen() failed!");
+    }
+    fgets(buffer, sizeof(buffer), pipe);
+    result += buffer;
+    pclose(pipe);
+
+    if(result != shasum){
+        cout << result << endl << shasum << endl;
+
+        std::cerr << "File Verification failed" << std::endl;
+        return false;
+    }
+    return true;
 }
