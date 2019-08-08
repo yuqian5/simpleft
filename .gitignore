@@ -1,3 +1,7 @@
 cmake-build-debug/
 .idea/
 .DS_Store
+cmake-build-debug-gcc--g/
+*.h.gch
+*.out
+*.txt
