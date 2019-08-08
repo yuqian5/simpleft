@@ -28,7 +28,7 @@ void TX::socketSetup() {
 void TX::transmit() {
     int fdin;
     string fileName = "testFile.txt";
-    cout << "Title: " << fileName << endl;
+    cout << "File Name: " << fileName << endl;
 
     struct stat fileInfo;
     if (stat(fileName.c_str(), &fileInfo) == 0) {

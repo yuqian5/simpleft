@@ -39,14 +39,14 @@ void RX::socketSetup() {
 }
 
 void RX::receive() {
-    string title;
+    string FileName;
     int fileSize = 0;
     string shasum;
     char newMsg[2048];
 
     //get title
     recv(newRxSocket, newMsg, sizeof(newMsg), 0);
-    title = newMsg;
+    FileName = newMsg;
     memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
 
     //get file size
@@ -60,36 +60,36 @@ void RX::receive() {
     shasum = newMsg;
     memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
 
-    cout << "Title: " << title << endl;
+    cout << "File ame: " << FileName << endl;
     cout << "File Size: " << fileSize << endl;
     cout << "SHA265 Sum: " << shasum << endl;
 
-    int fdout = open(title.c_str(), O_CREAT|O_WRONLY);
+    //create file using the fileName received from socket
+    int fdout = open(FileName.c_str(), O_CREAT|O_WRONLY);
     if(!fdout){
         std::cerr << "File cannot be created" << std::endl;
         exit(1);
     }
 
+    //receive until the other side does a orderly shutdown
     while (true) {
         //no more message if recvRET become 0, stop receiving
         int recvRET = recv(newRxSocket, newMsg, sizeof(newMsg), 0);
-
         if(recvRET == 0){
             break;
         }
-
         write(fdout, newMsg, sizeof(newMsg));
-
         memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
     }
 
-    if(verify(title, shasum)){
+    if(verify(FileName, shasum)){
         cout << "File Received and Verified" << endl;
     }else{
         cout << "File was received but cannot be verified" << endl;
     }
 }
 
+//verifies the file received by checking it sha265 sum against the one transferred.
 bool RX::verify(const string fileName, const string shasum) {
     //check shasum
     char buffer[256];
@@ -105,8 +105,6 @@ bool RX::verify(const string fileName, const string shasum) {
     pclose(pipe);
 
     if(result != shasum){
-        cout << result << endl << shasum << endl;
-
         std::cerr << "File Verification failed" << std::endl;
         return false;
     }
