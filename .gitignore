@@ -5,3 +5,4 @@ cmake-build-debug-gcc--g/
 *.h.gch
 *.out
 *.txt
+CMakeLists.txt
