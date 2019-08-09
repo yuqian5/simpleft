@@ -14,7 +14,7 @@ using namespace std;
  * receive:
  *      ./ftp -rx -ip [your IP addr] -p [port to receive from]
  * send:
- *      ./ftp -tx -ip [receive side IP] -p [port to send to]
+ *      ./ftp -tx -ip [receive side IP] -p [port to send to] [path to file]
  */
 
 // check port number, if legal, return port number, else print error and exit
