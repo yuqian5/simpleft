@@ -50,7 +50,6 @@ void TX::transmit() {
         string length_str = to_string(length);
         string dest = std::string( 3-length_str.length(), '0').append(length_str);
         send(txSocket, length_str.c_str(), strlen(length_str.c_str()), 0);
-        usleep(2000000);
     }
     //send filename
     send(txSocket, fileName.c_str(), strlen(fileName.c_str()), 0);
@@ -59,6 +58,10 @@ void TX::transmit() {
     result = shasum(fileName);
     std::cout << "SHA256 SUM: " << result << std::endl;
     send(txSocket, result.c_str(), strlen(result.c_str()), 0);
+    //send fileSize
+    string size_str = to_string(fileInfo.st_size);
+    string dest = std::string( 13-size_str.length(), '0').append(size_str);
+    send(txSocket, size_str.c_str(), strlen(size_str.c_str()), 0);
 
     //send file
     char toSend[2048];
