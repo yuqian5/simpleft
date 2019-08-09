@@ -5,9 +5,9 @@
 
 #include "TX.h"
 #include "RX.h"
-using namespace std;
+#include "misc.h"
 
-#include "mystruct.h"
+using namespace std;
 
 /*
  * command line argument template:
@@ -56,7 +56,7 @@ bool checkIP(const string& IP_str){
 // if all input are valid, convert and load input into struct CMDARGS and return it
 CMDARGS usrInputValid(char* cmd[], int argc){
     // basic commandline format check
-    if(argc == 6){
+    if(argc == 7 || argc == 6){
         if(strcmp(cmd[1],"-rx")==0||strcmp(cmd[1],"-tx")==0){
             if(strcmp(cmd[2],"-ip")==0){
                 if(strcmp(cmd[4],"-p")==0){
@@ -71,14 +71,22 @@ CMDARGS usrInputValid(char* cmd[], int argc){
     // convert and load arguments
     LOADARG:
         CMDARGS info = {};
+        //load mode
         if(strcmp(cmd[1], "-rx") == 0){
             info.mode = 1;
         }else if(strcmp(cmd[1], "-tx") == 0){
             info.mode = 2;
         }
-        info.port = checkPort(cmd[5]);
+        //load ip
         if(checkIP(cmd[3])){
             info.ip = cmd[3];
+        }
+        //load port
+        info.port = checkPort(cmd[5]);
+        //load file path
+        if(info.mode == 2){
+            info.filePath = cmd[6];
+
         }
 
         return info;
@@ -93,7 +101,7 @@ int main(int argc, char* argv[]) {
         cout << "Receiving on port " << info.port << endl;
         RX rx(info);
     }else{
-        cout << "Sending to " << info.ip << " on port " << info.port << endl;
+        cout << "Sending " << info.filePath << " to " << info.ip << " on port " << info.port << endl;
         TX tx(info);
     }
 

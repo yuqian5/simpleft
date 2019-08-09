@@ -1,7 +1,4 @@
 #include "RX.h"
-#include <netdb.h>
-
-#define BACKLOG 10
 
 
 void RX::socketSetup() {
@@ -40,19 +37,12 @@ void RX::socketSetup() {
 
 void RX::receive() {
     string FileName;
-    int fileSize = 0;
     string shasum;
     char newMsg[2048];
 
-    //get title
+    //get fileName
     recv(newRxSocket, newMsg, sizeof(newMsg), 0);
     FileName = newMsg;
-    memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
-
-    //get file size
-    recv(newRxSocket, newMsg, sizeof(newMsg), 0);
-    try{fileSize = stoi(newMsg, nullptr, 10);}
-    catch(invalid_argument &e){std::cerr << "size error: " << e.what() << std::endl;exit(1);}
     memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
 
     //get sha265 sum
@@ -60,12 +50,11 @@ void RX::receive() {
     shasum = newMsg;
     memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
 
-    cout << "File ame: " << FileName << endl;
-    cout << "File Size: " << fileSize << endl;
+    cout << "File Name: " << FileName << endl;
     cout << "SHA265 Sum: " << shasum << endl;
 
     //create file using the fileName received from socket
-    int fdout = open(FileName.c_str(), O_CREAT|O_WRONLY);
+    int fdout = open(FileName.c_str(), O_CREAT|O_WRONLY|S_IRUSR|S_IWUSR);
     if(!fdout){
         std::cerr << "File cannot be created" << std::endl;
         exit(1);
@@ -90,21 +79,12 @@ void RX::receive() {
 }
 
 //verifies the file received by checking it sha265 sum against the one transferred.
-bool RX::verify(const string fileName, const string shasum) {
+bool RX::verify(const string& fileName, const string& sum) {
     //check shasum
-    char buffer[256];
     string result;
-    string cmd = "shasum -a 256 ";
-    cmd += fileName;
-    FILE* pipe = popen(cmd.c_str() , "r");
-    if(!pipe){
-        throw std::runtime_error("popen() failed!");
-    }
-    fgets(buffer, sizeof(buffer), pipe);
-    result += buffer;
-    pclose(pipe);
+    result = shasum(fileName);
 
-    if(result != shasum){
+    if(result != sum){
         std::cerr << "File Verification failed" << std::endl;
         return false;
     }

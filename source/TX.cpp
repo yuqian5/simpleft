@@ -1,6 +1,4 @@
 #include "TX.h"
-#include <netdb.h>
-
 
 void TX::socketSetup() {
     //struct setup
@@ -27,7 +25,6 @@ void TX::socketSetup() {
 
 void TX::transmit() {
     int fdin;
-    string fileName = "testFile.txt";
     cout << "File Name: " << fileName << endl;
 
     struct stat fileInfo;
@@ -53,19 +50,8 @@ void TX::transmit() {
     usleep(200);
 
     //send sha256 sum
-    char buffer[256];
     string result;
-    string cmd = "shasum -a 256 ";
-    cmd += fileName;
-    FILE* pipe = popen(cmd.c_str() , "r");
-
-    if(!pipe){
-        throw std::runtime_error("popen() failed!");
-    }
-
-    fgets(buffer, sizeof(buffer), pipe);
-    result += buffer;
-    pclose(pipe);
+    result = shasum(fileName);
     std::cout << "SHA256 SUM: " << result << std::endl;
     send(txSocket, result.c_str(), strlen(result.c_str()), 0);
     usleep(200);

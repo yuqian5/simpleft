@@ -10,9 +10,13 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <netdb.h>
+
 using namespace std;
 
-#include "mystruct.h"
+#include "misc.h"
+
+#define BACKLOG 10
 
 class RX {
 public:
@@ -35,8 +39,12 @@ private:
     struct sockaddr_in address;
     struct sockaddr_storage receive_storage;
 
+    // setup, then listen and accept connection from TX side
+    void socketSetup();
 
-    void socketSetup(); // setup, then listen and accept connection from TX side
+    // receive file name, file sha, file data. Write file data to a file created with the same file name
     void receive();
-    static bool verify(string fileName, string shasum);
+
+    // generates sharsum of the file created, compare it to the shasum received
+    static bool verify(const string& fileName, const string& sum);
 };

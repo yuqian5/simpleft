@@ -10,6 +10,7 @@ struct CMDARGS{
     int mode; // rx = 1, tx = 2
     std::string ip;
     unsigned short int port;
+    std::string filePath;
 };
 
 // get the sha265 sum of any file
