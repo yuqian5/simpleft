@@ -98,6 +98,8 @@ void RX::receive() {
         memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
     }
 
+    close(fdout);
+
     //change file permission so it can be read without sudo privilege
     string cmd = "chmod 666 ";
     cmd += FileName;
