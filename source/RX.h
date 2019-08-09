@@ -20,7 +20,7 @@ using namespace std;
 
 class RX {
 public:
-    explicit RX(CMDARGS cmd){
+    explicit RX(CMDARGS cmd) {
         // copy commandline arguments
         info = std::move(cmd);
 
@@ -28,7 +28,7 @@ public:
         receive();
     }
 
-    ~RX(){
+    ~RX() {
         shutdown(rxSocket, 0);
         shutdown(newRxSocket, 0);
     }
@@ -46,5 +46,5 @@ private:
     void receive();
 
     // generates sharsum of the file created, compare it to the shasum received
-    static bool verify(const string& fileName, const string& sum);
+    static bool verify(const string &fileName, const string &sum);
 };

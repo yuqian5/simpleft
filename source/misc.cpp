@@ -1,13 +1,13 @@
 #include "misc.h"
 
-std::string shasum(std::string fileName){
+std::string shasum(std::string fileName) {
     char buffer[256];
     std::string result;
     std::string cmd = "shasum -a 256 ";
     cmd += fileName;
-    FILE* pipe = popen(cmd.c_str() , "r");
+    FILE *pipe = popen(cmd.c_str(), "r");
 
-    if(!pipe){
+    if (!pipe) {
         throw std::runtime_error("popen() failed!");
     }
 

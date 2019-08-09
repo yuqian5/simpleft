@@ -8,13 +8,14 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <fcntl.h>
+
 using namespace std;
 
 #include "misc.h"
 
 class TX {
 public:
-    explicit TX(CMDARGS cmd){
+    explicit TX(CMDARGS cmd) {
         // copy commandline arguments
         info = std::move(cmd);
         fileName = info.filePath;
@@ -22,7 +23,8 @@ public:
         socketSetup();
         transmit();
     }
-    ~TX(){
+
+    ~TX() {
         shutdown(txSocket, 0);
     }
 
