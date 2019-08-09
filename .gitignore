@@ -6,3 +6,4 @@ cmake-build-debug-gcc--g/
 *.out
 *.txt
 CMakeLists.txt
+lanft
