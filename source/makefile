@@ -1,17 +1,13 @@
 main:
-	g++-9 -Wno-deprecated -o lanft main.cpp misc.cpp misc.h TX.cpp TX.h RX.cpp RX.h
-
-main.o: main.cpp TX.h misc.h RX.h
-misc.o: misc.cpp misc.h
-misc.o: misc.h
-TX.o: TX.cpp TX.h misc.h
-TX.o: TX.h misc.h
-RX.o: RX.cpp RX.h misc.h
-RX.o: RX.h misc.h
+	g++-9 -w -Wno-deprecated -o lanft main.cpp misc.cpp misc.h TX.cpp TX.h RX.cpp RX.h
 
 clean:
 	rm *.h.gch
 
-#TODO add make install
+install:
+	mv -v lanft /usr/local/bin/
+
+uninstall:
+	rm -i /usr/local/bin/lanft
 
 
