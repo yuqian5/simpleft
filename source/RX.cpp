@@ -76,6 +76,11 @@ void RX::receive() {
         memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
     }
 
+    //change file permission
+    string cmd = "chmod +r ";
+    cmd += FileName;
+    system(cmd.c_str());
+
     if(verify(FileName, shasum)){
         cout << "File Received and Verified" << endl;
     }else{
