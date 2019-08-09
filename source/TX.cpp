@@ -48,7 +48,11 @@ void TX::transmit() {
         exit(1);
     }else{
         string length_str = to_string(length);
-        string dest = std::string( 3-length_str.length(), '0').append(length_str);
+        int diff = 3 - length_str.length();
+        for(int i = 0; i < diff; i++){
+            length_str = "0" + length_str;
+        }
+        cout << strlen(length_str.c_str());
         send(txSocket, length_str.c_str(), strlen(length_str.c_str()), 0);
     }
     //send filename
@@ -60,7 +64,10 @@ void TX::transmit() {
     send(txSocket, result.c_str(), strlen(result.c_str()), 0);
     //send fileSize
     string size_str = to_string(fileInfo.st_size);
-    string dest = std::string( 13-size_str.length(), '0').append(size_str);
+    int diff = 13 - size_str.length();
+    for(int i = 0; i < diff; i++){
+        size_str = "0" + size_str;
+    }
     send(txSocket, size_str.c_str(), strlen(size_str.c_str()), 0);
 
     //send file

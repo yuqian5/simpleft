@@ -51,18 +51,19 @@ void RX::receive() {
     recv(newRxSocket, newMsg, fileName_length, 0);
     FileName = newMsg;
     memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
-    //get fileSize
-    recv(newRxSocket, newMsg, 13, 0);
-    try{fileSize = stoi(newMsg, nullptr, 10);}
-    catch(invalid_argument &e){std::cerr << "error converting fileSize size" << std::endl; exit(1);}
     //get sha265 sum
     recv(newRxSocket, newMsg, 78, 0);
     shasum = newMsg;
     memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
+    //get fileSize
+    recv(newRxSocket, newMsg, 13, 0);
+    try{fileSize = stoi(newMsg, nullptr, 10);}
+    catch(invalid_argument &e){std::cerr << "error converting fileSize size" << std::endl; exit(1);}
 
     cout << "File Name: " << FileName << endl;
-    cout << "SHA265 Sum: " << shasum << endl;
     cout << "File Size: " << fileSize << endl;
+    cout << "SHA265 Sum: " << shasum << endl;
+
 
     //create file using the fileName received from socket
     int fdout = open(FileName.c_str(), O_CREAT|O_WRONLY|S_IRUSR|S_IWUSR);
