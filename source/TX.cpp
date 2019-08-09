@@ -74,9 +74,19 @@ void TX::transmit() {
 
     //send file
     char toSend[2048];
-    while (read(fdin, toSend, 2048)) {
-        send(txSocket, toSend, strlen(toSend), 0);
+    int chunkSize = 2048;
+    int fileSize = fileInfo.st_size;
 
+    while(true){
+        if (chunkSize > fileSize) {
+            chunkSize = fileSize;
+        }else{
+            fileSize-=chunkSize;
+        }
+        if(!read(fdin, toSend, chunkSize)){
+            break;
+        }
+        send(txSocket, toSend, strlen(toSend), 0);
         memset(toSend, 0, sizeof(toSend));
     }
     close(fdin);
