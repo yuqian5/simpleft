@@ -52,7 +52,6 @@ void TX::transmit() {
         for(int i = 0; i < diff; i++){
             length_str = "0" + length_str;
         }
-        cout << strlen(length_str.c_str());
         send(txSocket, length_str.c_str(), strlen(length_str.c_str()), 0);
     }
     //send filename
@@ -64,7 +63,7 @@ void TX::transmit() {
     send(txSocket, result.c_str(), strlen(result.c_str()), 0);
     //send fileSize
     string size_str = to_string(fileInfo.st_size);
-    int diff = 13 - size_str.length();
+    int diff = 13 - (int) size_str.length();
     for(int i = 0; i < diff; i++){
         size_str = "0" + size_str;
     }

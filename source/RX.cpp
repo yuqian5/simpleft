@@ -52,7 +52,7 @@ void RX::receive() {
     FileName = newMsg;
     memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
     //get sha265 sum
-    recv(newRxSocket, newMsg, 78, 0);
+    recv(newRxSocket, newMsg, 79, 0);
     shasum = newMsg;
     memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
     //get fileSize
