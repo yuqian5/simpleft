@@ -1,5 +1,5 @@
 main:
-	g++-9 -w -Wno-deprecated -o lanft main.cpp misc.cpp misc.h TX.cpp TX.h RX.cpp RX.h
+	g++ -w -Wno-deprecated -o lanft main.cpp misc.cpp misc.h TX.cpp TX.h RX.cpp RX.h
 
 clean:
 	rm *.h.gch
