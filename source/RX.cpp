@@ -39,14 +39,19 @@ void RX::receive() {
     string FileName;
     string shasum;
     char newMsg[2048];
+    int fileName_length;
 
+    //get fileName length
+    recv(newRxSocket, newMsg, 3, 0);
+    try{fileName_length = stoi(newMsg, nullptr, 10);}
+    catch(invalid_argument &e){std::cerr << "error converting filename size" << std::endl; exit(1);}
+    memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
     //get fileName
-    recv(newRxSocket, newMsg, sizeof(newMsg), 0);
+    recv(newRxSocket, newMsg, fileName_length, 0);
     FileName = newMsg;
     memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
-
     //get sha265 sum
-    recv(newRxSocket, newMsg, sizeof(newMsg), 0);
+    recv(newRxSocket, newMsg, 78, 0);
     shasum = newMsg;
     memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
 

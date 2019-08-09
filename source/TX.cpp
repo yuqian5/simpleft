@@ -41,21 +41,24 @@ void TX::transmit() {
         exit(1);
     }
 
+    //send filename length
+    int length = strlen(fileName.c_str());
+    if(length > 999){
+        std::cerr << "filepath too long" << std::endl;
+        exit(1);
+    }else{
+        string length_str = to_string(length);
+        string dest = std::string( 3-length_str.length(), '0').append(length_str);
+        send(txSocket, length_str.c_str(), strlen(length_str.c_str()), 0);
+        usleep(2000000);
+    }
     //send filename
     send(txSocket, fileName.c_str(), strlen(fileName.c_str()), 0);
-    usleep(200);
-
-    //send filesize
-    send(txSocket, to_string(fileInfo.st_size).c_str(), strlen(to_string(fileInfo.st_size).c_str()), 0);
-    usleep(200);
-
     //send sha256 sum
     string result;
     result = shasum(fileName);
     std::cout << "SHA256 SUM: " << result << std::endl;
     send(txSocket, result.c_str(), strlen(result.c_str()), 0);
-    usleep(200);
-
 
     //send file
     char toSend[2048];
