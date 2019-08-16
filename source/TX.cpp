@@ -1,6 +1,9 @@
 #include "TX.h"
 
-//TODO: Read file in binary mode, serialized it, then send. Therefore, the program is capable of sending any type of file
+//TODO : unable to send another file format beside text, need
+// fix, the fact that I read and write the file in binary mode should have fixed this prolem
+// suspect that serialization is one of the cause
+// refer to https://stackoverflow.com/questions/15445207/sending-image-jpeg-through-socket-in-c-linux
 
 void TX::socketSetup() {
     //struct setup
