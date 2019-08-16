@@ -1,5 +1,6 @@
 #include "RX.h"
 
+//TODO: receive file in binary, serialized it, then write to file
 
 void RX::socketSetup() {
     //struct setup
@@ -75,9 +76,10 @@ void RX::receive() {
     cout << "SHA265 Sum: " << shasum << endl;
 
     //create file using the fileName received from socket
-    int fdout = open(FileName.c_str(), O_CREAT | O_WRONLY | S_IRUSR | S_IWUSR);
-    if (!fdout) {
-        std::cerr << "File cannot be created" << std::endl;
+    FILE *fdout;
+    fdout = fopen(FileName.c_str(), "wb");
+    if (fdout == nullptr) {
+        std::cerr << "an error occurred while opening file " << errno << std::endl;
         exit(1);
     }
 
@@ -94,11 +96,11 @@ void RX::receive() {
         if (recvRET == 0) {
             break;
         }
-        write(fdout, newMsg, chunkSize);
+        fwrite(newMsg, chunkSize,1 ,fdout);
         memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
     }
 
-    close(fdout);
+    fclose(fdout);
 
     //change file permission so it can be read without sudo privilege
     string cmd = "chmod 666 ";

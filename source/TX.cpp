@@ -1,5 +1,7 @@
 #include "TX.h"
 
+//TODO: Read file in binary mode, serialized it, then send. Therefore, the program is capable of sending any type of file
+
 void TX::socketSetup() {
     //struct setup
     address.sin_family = AF_INET;
@@ -24,15 +26,15 @@ void TX::socketSetup() {
 }
 
 void TX::transmit() {
-    int fdin;
+    FILE *fdin;
     cout << "File Name: " << fileName << endl;
 
     struct stat fileInfo;
     if (stat(fileName.c_str(), &fileInfo) == 0) {
         cout << "File Size: " << fileInfo.st_size << endl;
-
-        fdin = open(fileName.c_str(), O_RDONLY);
-        if (fdin == -1) {
+        //open file
+        fdin = fopen(fileName.c_str(), "rb");
+        if (fdin == nullptr) {
             std::cerr << "an error occurred while opening file " << errno << std::endl;
             exit(1);
         }
@@ -56,6 +58,7 @@ void TX::transmit() {
     }
 
     //send filename
+    // TODO: fix when enter a path such as /usr/file, fileName should be file not /usr/file
     send(txSocket, fileName.c_str(), strlen(fileName.c_str()), 0);
 
     //send sha256 sum
@@ -73,23 +76,23 @@ void TX::transmit() {
     send(txSocket, size_str.c_str(), strlen(size_str.c_str()), 0);
 
     //send file
-    char toSend[2048];
+    unsigned char toSend[2048];
     int chunkSize = 2048;
     int fileSize = fileInfo.st_size;
 
-    while(true){
+    while(fileSize != 0){
         if (chunkSize > fileSize) {
             chunkSize = fileSize;
+            fileSize = 0;
         }else{
             fileSize-=chunkSize;
         }
-        if(!read(fdin, toSend, chunkSize)){
-            break;
-        }
-        send(txSocket, toSend, strlen(toSend), 0);
+        fread(toSend, chunkSize, 1, fdin);
+
+        send(txSocket, toSend, chunkSize, 0);
         memset(toSend, 0, sizeof(toSend));
     }
-    close(fdin);
+    fclose(fdin);
 }
 
 
