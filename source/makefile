@@ -8,6 +8,6 @@ install:
 	sudo mv -v lanft /usr/local/bin/
 
 uninstall:
-	sudo rm -i /usr/local/bin/lanft
+	sudo rm -i -v /usr/local/bin/lanft
 
 
