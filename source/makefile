@@ -5,7 +5,7 @@ clean:
 	rm *.h.gch
 
 install:
-	sudo mv -v lanft /usr/local/bin/
+	sudo cp -v lanft /usr/local/bin/
 
 uninstall:
 	sudo rm -i -v /usr/local/bin/lanft
