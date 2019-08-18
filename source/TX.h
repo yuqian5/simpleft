@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <cstdio>
 #include <unistd.h>
 #include <iostream>
 #include <sys/socket.h>
@@ -18,7 +18,7 @@ public:
     explicit TX(CMDARGS cmd) {
         // copy commandline arguments
         info = std::move(cmd);
-        fileName = info.filePath;
+        filePath = info.filePath;
 
         socketSetup();
         transmit();
@@ -32,9 +32,10 @@ private:
     CMDARGS info;
     int txSocket;
     struct sockaddr_in address;
-    string fileName;
+    string filePath;
 
     void socketSetup(); // setup and connect to RX side
-    void transmit();
+    void transmit(); // sending the file
+    string extractFilename(); // extract file name from file path if needed
 };
 

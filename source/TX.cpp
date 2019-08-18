@@ -30,13 +30,13 @@ void TX::socketSetup() {
 
 void TX::transmit() {
     FILE *fdin;
-    cout << "File Name: " << fileName << endl;
+    cout << "File Name: " << filePath << endl;
 
     struct stat fileInfo;
-    if (stat(fileName.c_str(), &fileInfo) == 0) {
+    if (stat(filePath.c_str(), &fileInfo) == 0) {
         cout << "File Size: " << fileInfo.st_size << endl;
         //open file
-        fdin = fopen(fileName.c_str(), "rb");
+        fdin = fopen(filePath.c_str(), "rb");
         if (fdin == nullptr) {
             std::cerr << "an error occurred while opening file " << errno << std::endl;
             exit(1);
@@ -47,7 +47,10 @@ void TX::transmit() {
     }
 
     //send filename length
-    int length = strlen(fileName.c_str());
+    string fileName; // just the file name, path removed
+    fileName = extractFilename();
+
+    int length = fileName.length();
     if (length > 999) {
         std::cerr << "filepath too long" << std::endl;
         exit(1);
@@ -57,18 +60,18 @@ void TX::transmit() {
         for (int i = 0; i < diff; i++) {
             length_str = "0" + length_str;
         }
-        send(txSocket, length_str.c_str(), strlen(length_str.c_str()), 0);
+        send(txSocket, length_str.c_str(), length_str.length(), 0);
     }
 
     //send filename
-    // TODO: fix when enter a path such as /usr/file, fileName should be file not /usr/file
-    send(txSocket, fileName.c_str(), strlen(fileName.c_str()), 0);
+    send(txSocket, fileName.c_str(), fileName.length(), 0);
 
     //send sha256 sum
-    string result;
-    result = shasum(fileName);
+    string result, result_temp;
+    result_temp = shasum(filePath);
+    result = result_temp.substr(0, result_temp.find(' '));
     std::cout << "SHA256 SUM: " << result << std::endl;
-    send(txSocket, result.c_str(), strlen(result.c_str()), 0);
+    send(txSocket, result.c_str(), result.length(), 0);
 
     //send fileSize
     string size_str = to_string(fileInfo.st_size);
@@ -76,7 +79,7 @@ void TX::transmit() {
     for (int i = 0; i < diff; i++) {
         size_str = "0" + size_str;
     }
-    send(txSocket, size_str.c_str(), strlen(size_str.c_str()), 0);
+    send(txSocket, size_str.c_str(), size_str.length(), 0);
 
     //send file
     unsigned char toSend[2048];
@@ -98,4 +101,14 @@ void TX::transmit() {
     fclose(fdin);
 }
 
+string TX::extractFilename() {
+    unsigned short index = filePath.length();
+    for ( ; index > 0; --index) {
+        if(filePath[index] == '/'){
+            ++index;
+            return filePath.substr(index, filePath.length());
+        }
+    }
+    return filePath;
+}
 

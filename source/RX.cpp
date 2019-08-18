@@ -61,7 +61,7 @@ void RX::receive() {
     memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
 
     //get sha265 sum
-    recv(newRxSocket, newMsg, 79, 0);
+    recv(newRxSocket, newMsg, 64, 0);
     shasum = newMsg;
     memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
 
@@ -120,8 +120,9 @@ void RX::receive() {
 //verifies the file received by checking it sha265 sum against the one transferred.
 bool RX::verify(const string &fileName, const string &sum) {
     //check shasum
-    string result;
-    result = shasum(fileName);
+    string result, result_temp;
+    result_temp = shasum(fileName);
+    result = result_temp.substr(0, result_temp.find(' '));
 
     if (result != sum) {
         std::cerr << "File Verification failed" << std::endl;
