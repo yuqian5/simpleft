@@ -1,5 +1,6 @@
 #include "misc.h"
 
+// function that get the sharsun 256 of a file
 std::string shasum(std::string fileName) {
     char buffer[256];
     std::string result;
