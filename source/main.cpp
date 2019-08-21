@@ -1,6 +1,4 @@
 #include <iostream>
-#include <cstring>
-#include <stdexcept>
 #include "TX.h"
 #include "RX.h"
 #include "misc.h"
@@ -16,8 +14,7 @@ using namespace std;
  */
 
 
-// process usr input, if invalid input found, print error message and exit
-// if all input are valid, convert and load input into struct CMDARGS and return it
+
 
 
 int main(int argc, char* argv[]) {
