@@ -28,4 +28,6 @@ bool checkIP(const std::string& IP_str);
 CMDARGS parseInput(char* cmd[], int argc);
 
 //parse argv (InUse... Soon to be replaced)
+// process usr input, if invalid input found, print error message and exit
+// if all input are valid, convert and load input into struct CMDARGS and return it
 CMDARGS parseCMDInput(char **cmd, int argc);
