@@ -18,12 +18,25 @@ void TX::socketSetup() {
         std::cerr << "socket() failed" << std::endl;
         exit(1);
     }
-    //connect
-    if (connect(txSocket, (struct sockaddr *) &address, sizeof(address)) < 0) {
-        std::cerr << "connection failed " << errno << std::endl;
-        exit(1);
+
+    //connect, timeout after 600s (10min)
+    int tries_left = 600;
+    cout << "Connecting...";
+    flush(cout);
+    while(tries_left){
+        if (connect(txSocket, (struct sockaddr *) &address, sizeof(address)) < 0) {
+            --tries_left;
+            if(!tries_left){
+                std::cerr << "\nconnection failed, no receiver found" << std::endl;
+                exit(1);
+            }else{
+                sleep(1);
+            }
+        } else {
+            std::cout << "Connected" << std::endl;
+            break;
+        }
     }
-    std::cout << "Socket Connected" << std::endl;
 }
 
 void TX::transmit() {
