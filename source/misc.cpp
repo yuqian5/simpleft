@@ -1,7 +1,7 @@
 #include "misc.h"
 
 // get the sha265 sum of any file
-std::string shasum(std::string fileName){
+std::string shasum(const std::string& fileName){
     char buffer[256];
     std::string result;
     std::string cmd = "shasum -a 256 ";
@@ -94,7 +94,7 @@ CMDARGS parseCMDInput(char **cmd, int argc){
 //TODO : parseInput incomplete
 CMDARGS parseInput(char* cmd[], int argc){
     int c;
-
+    CMDARGS arg = {};
     while(true){
         int opt_index = 1;
         static struct option long_options[] = {
@@ -111,6 +111,5 @@ CMDARGS parseInput(char* cmd[], int argc){
             break;
         }
     }
-
-
+    return arg;
 }

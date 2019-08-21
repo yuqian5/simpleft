@@ -16,7 +16,7 @@ struct CMDARGS {
 };
 
 // get the sha265 sum of any file
-std::string shasum(std::string fileName);
+std::string shasum(const std::string& fileName);
 
 // check port number, if legal, return port number, else print error and exit
 int checkPort(const std::string& port_str);
