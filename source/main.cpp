@@ -19,7 +19,7 @@ using namespace std;
 
 int main(int argc, char* argv[]) {
     //get and sanitize cmd arguments store in struct CMDARGS
-    CMDARGS info = parseCMDInput(argv, argc);
+    CMDARGS info = parseInput(argv, argc);
 
     //mode 1 = rx, 2 = tx
     if(info.mode == 1){
