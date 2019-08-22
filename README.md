@@ -13,7 +13,7 @@ This program transfers a file/directory of your choosing to another machine conn
 
         make uninstall
         
-* Default install path:
+* Default install path (require sudo privilege):
     
         /usr/local/bin/
     
