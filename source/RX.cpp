@@ -113,6 +113,12 @@ void RX::receive() {
     } else {
         cout << "File was received but cannot be verified" << endl;
     }
+
+    if (info.filePath.compare("lanft_temp.tar.gz")) {
+        cout << "Received a packed directory, unpacking now...";
+        unpackDir();
+        cout << "done" << endl;
+    }
 }
 
 //verifies the file received by checking it sha265 sum against the one transferred.

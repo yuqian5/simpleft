@@ -17,13 +17,19 @@ struct CMDARGS {
 };
 
 // get the sha265 sum of any file
-std::string shasum(const std::string& fileName);
+std::string shasum(const std::string &fileName);
 
 // check port number, if legal, return port number, else print error and return -1
-int checkPort(const std::string& port_str);
+int checkPort(const std::string &port_str);
 
 // check IP addr, if valid, return true, else print error and return false
-bool checkIP(const std::string& IP_str);
+bool checkIP(const std::string &IP_str);
 
 // parse argv
-CMDARGS parseInput(char* cmd[], int argc);
+CMDARGS parseInput(char *cmd[], int argc);
+
+// tar a directory is -d is provide in the argv
+int packDir(std::string path);
+
+// unpack .tar.gz
+void unpackDir();

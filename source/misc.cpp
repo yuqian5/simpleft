@@ -1,7 +1,7 @@
 #include "misc.h"
 
 // get the sha265 sum of any file
-std::string shasum(const std::string& fileName){
+std::string shasum(const std::string &fileName) {
     char buffer[256];
     std::string result;
     std::string cmd = "shasum -a 256 ";
@@ -19,33 +19,34 @@ std::string shasum(const std::string& fileName){
 }
 
 // check port number, if legal, return port number, else print error and exit
-int checkPort(const std::string& port_str){
+int checkPort(const std::string &port_str) {
     int port;
-    try{
+    try {
         port = stoi(port_str);
-        if(port < 1023 || port > 65535){
+        if (port < 1023 || port > 65535) {
             throw std::range_error("port number out of range 1024<=port<=65535");
         }
     }
-    catch(const std::invalid_argument& em){
+    catch (const std::invalid_argument &em) {
         std::cerr << "Invalid argument: " << "port number must be a int in base 10" << std::endl;
         exit(1);
     }
-    catch(const std::range_error& em) {
+    catch (const std::range_error &em) {
         return -1;
     }
     return port;
 }
 
 // check IP addr, if valid, return true, else print error and exit
-bool checkIP(const std::string& IP_str){
-    try{
-        if (regex_match(IP_str, std::regex("\\b(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\b"))){ // validate ip
+bool checkIP(const std::string &IP_str) {
+    try {
+        if (regex_match(IP_str, std::regex(
+                "\\b(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\b"))) { // validate ip
             return true;
         }
         throw std::domain_error("IP address inputted not valid");
     }
-    catch(std::domain_error& em){
+    catch (std::domain_error &em) {
         std::cerr << "Input Error: " << em.what() << std::endl;
         return false;
     }
@@ -100,7 +101,6 @@ CMDARGS parseInput(char *cmd[], int argc) {
     }
 
     // get port
-    start_index = 0;
     start_index = argv_str.find("-p");
     if (start_index != std::string::npos) { // if -p exist in argv
         int end_index = argv_str.substr(start_index + 3, argv_str.length()).find(' ');
@@ -123,4 +123,29 @@ CMDARGS parseInput(char *cmd[], int argc) {
     }
 
     return args;
+}
+
+//TODO: unable to detect is taring has failed, need fix
+int packDir(std::string path) {
+    char buffer[256];
+    std::string result;
+    std::string cmd = "tar -zcf lanft_temp.tar.gz " + path;
+    FILE *pipe = popen(cmd.c_str(), "r");
+
+    if (!pipe) {
+        throw std::runtime_error("popen() failed!");
+    }
+
+    fgets(buffer, sizeof(buffer), pipe);
+    result += buffer;
+    if (!result.empty()) {
+        return 0;
+    }
+    pclose(pipe);
+    return 1;
+}
+
+void unpackDir() {
+    system("tar -xzf lanft_temp.tar.gz");
+    system("rm lanft_temp.tar.gz");
 }
