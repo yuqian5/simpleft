@@ -1,20 +1,10 @@
 #include <iostream>
-#include "TX.h"
-#include "RX.h"
-#include "misc.h"
 
 using namespace std;
 
-/*
- * command line argument template:
- * receive:
- *      ./lanft -rx -ip [your IP addr] -p [port to receive from]
- * send:
- *      ./lanft -tx -ip [receive side IP] -p [port to send to] [path to file]
- */
-
-
-
+#include "TX.h"
+#include "RX.h"
+#include "misc.h"
 
 
 int main(int argc, char* argv[]) {
