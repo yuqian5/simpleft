@@ -129,16 +129,16 @@ CMDARGS parseInput(char *cmd[], int argc) {
 int packDir(std::string path) {
     char buffer[256];
     std::string result;
-    std::string cmd = "tar -zcf lanft_temp.tar.gz " + path;
+    std::string cmd = "tar -zcf lanft_temp.tar.gz " + path + " 2>&1";
     FILE *pipe = popen(cmd.c_str(), "r");
 
     if (!pipe) {
         throw std::runtime_error("popen() failed!");
     }
 
-    fgets(buffer, sizeof(buffer), pipe);
+    fgets(buffer, 256, pipe);
     result += buffer;
-    if (!result.empty()) {
+    if (result.find("No such file") != std::string::npos) {
         return 0;
     }
     pclose(pipe);

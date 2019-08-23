@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
     } else {
         if (info.dir) { // if the path points to a directory, pack it into a tar.gz
             if (!packDir(info.filePath)) {
-                std::cerr << "Unable to pack directory with tar" << std::endl;
+                std::cerr << "Unable to tar directory, make sure you have the correct path" << std::endl;
                 exit(1);
             }
             info.filePath = "lanft_temp.tar.gz";
