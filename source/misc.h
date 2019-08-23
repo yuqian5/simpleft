@@ -11,7 +11,7 @@
 struct CMDARGS {
     int mode; // rx = 1, tx = 2
     std::string ip; // ip stored as a string
-    unsigned short int port; // port number stored as a unsigned short int
+    int port; // port number stored as a unsigned short int
     std::string filePath; // path to the file, or directory if -d is indicated
     bool dir; // indicate of filePath points to a folder
 };
