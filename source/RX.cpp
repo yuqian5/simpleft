@@ -114,7 +114,7 @@ void RX::receive() {
         cout << "File was received but cannot be verified" << endl;
     }
 
-    if (info.filePath.compare("lanft_temp.tar.gz")) {
+    if (info.filePath == ("lanft_temp.tar.gz")) {
         cout << "Received a packed directory, unpacking now...";
         unpackDir();
         cout << "done" << endl;
@@ -134,3 +134,8 @@ bool RX::verify(const string &fileName, const string &sum) {
     }
     return true;
 }
+
+
+
+
+

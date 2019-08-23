@@ -14,6 +14,7 @@ struct CMDARGS {
     int port; // port number stored as a unsigned short int
     std::string filePath; // path to the file, or directory if -d is indicated
     bool dir; // indicate of filePath points to a folder
+    bool enc; // indicate if encryption is need
 };
 
 // get the sha265 sum of any file
@@ -29,7 +30,7 @@ bool checkIP(const std::string &IP_str);
 CMDARGS parseInput(char *cmd[], int argc);
 
 // tar a directory is -d is provide in the argv
-int packDir(std::string path);
+int packDir(const std::string &path);
 
 // unpack .tar.gz
 void unpackDir();

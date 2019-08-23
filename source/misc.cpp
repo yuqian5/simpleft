@@ -84,6 +84,9 @@ CMDARGS parseInput(char *cmd[], int argc) {
     }
     args.mode = mode;
 
+    // get enc
+    args.enc = (argv_str.find("en") != std::string::npos);
+
     // get ip
     int start_index = 0;
     start_index = argv_str.find("ip");
@@ -126,7 +129,7 @@ CMDARGS parseInput(char *cmd[], int argc) {
 }
 
 //TODO: unable to detect is taring has failed, need fix
-int packDir(std::string path) {
+int packDir(const std::string &path) {
     char buffer[256];
     std::string result;
     std::string cmd = "tar -zcf lanft_temp.tar.gz " + path + " 2>&1";
