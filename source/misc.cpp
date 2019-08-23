@@ -139,6 +139,7 @@ int packDir(std::string path) {
     fgets(buffer, 256, pipe);
     result += buffer;
     if (result.find("No such file") != std::string::npos) {
+        system("rm lanft_temp.tar.gz");
         return 0;
     }
     pclose(pipe);
