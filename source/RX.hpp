@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "misc.h"
+#include "misc.hpp"
 #include "Transceiver.hpp"
 
 #define BACKLOG 1

@@ -5,7 +5,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "misc.h"
+#include "misc.hpp"
 #include "Transceiver.hpp"
 
 #ifndef LANFT_TX_HPP
