@@ -1,7 +1,7 @@
-# LANFileTransfer
+# LANFT
 
 ## About
-This program transfers a file/directory of your choosing to another machine connected to LAN using TCP socket. The integrity of the file is checked with SHA265 automatically.
+Transfers a file/directory to another machine connected to LAN using TCP socket. The integrity of the file is checked with SHA265 automatically.
 
 ## Install/Uninstall
 * Compile and Install
@@ -20,19 +20,12 @@ This program transfers a file/directory of your choosing to another machine conn
 
 ## Usage
  * receive:
- *      lanft -rx -ip [your IP addr] -p [port]
- * send:
- *      lanft -tx -ip [receiver side IP addr] -p [port] [path/file]
- * send directory:
- *      lanft -tx -d -ip [receiver side IP addr] -p [port] [path/file]
- * note:
- *      -ip, -p and -tx/-rx is always required to run this CLI program
- * example:
- *      lanft -tx -ip 127.0.0.1 -p 8000 -d /dir1/dir2/dir3
- 
+ *      lanft rx -p [port]
+ * send over ipv4:
+ *      lanft tx -ip4 [ipv4 address] -p [port] [path to file]
+ * send over ipv6:
+ *      lanft tx -ip6 [ipv4 address] -p [port] [path to file]
  
 ## Compatibility
-This program will run on **MacOS** and **most Linux** without a hitch. Unfortunately, it is 100% not supported on window. That is, unless your are using WSL.
-
-**MacOS** users, make sure your g++ is linked to GNU g++ instead of clang. 
-If your installed the g++ from homebrew, simply change "g++" in the makefile to "g++-\<version\>" (E.g. g++-8).  
+ *      Most Linux
+ *      MacOS
