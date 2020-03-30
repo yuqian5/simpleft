@@ -4,8 +4,5 @@ cmake-build-debug/
 cmake-build-debug-gcc--g/
 *.h.gch
 *.out
-*.txt
-CMakeLists.txt
 lanft
 ubuntu_setup_env.sh
-.gitignore
