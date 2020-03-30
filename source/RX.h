@@ -1,50 +1,48 @@
-#include <cstdio>
 #include <unistd.h>
 #include <iostream>
 #include <sys/socket.h>
-#include <cstdlib>
-#include <utility>
-#include <netinet/in.h>
 #include <arpa/inet.h>
-#include <sys/types.h>
-#include <cstring>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <netdb.h>
-
-using namespace std;
 
 #include "misc.h"
+#include "Transceiver.hpp"
 
-#define BACKLOG 10
+#define BACKLOG 1
 
-class RX {
+#ifndef LANFT_RX_HPP
+#define LANFT_RX_HPP
+
+class RX : protected Transceiver {
 public:
-    explicit RX(CMDARGS cmd) {
-        // copy commandline arguments
-        info = std::move(cmd);
+    explicit RX(CMDARGS &cmd);
 
-        socketSetup();
-        receive();
-    }
-
-    ~RX() {
-        shutdown(rxSocket, 0);
-        shutdown(newRxSocket, 0);
-    }
+    ~RX();
 
 private:
     CMDARGS info;
-    int rxSocket, newRxSocket;
-    struct sockaddr_in address;
-    struct sockaddr_storage receive_storage;
+    int listenfd;
+    int connectfd;
+    struct sockaddr_in6 serverAddr;
+    struct sockaddr_storage dataStorage;
 
-    // setup, then listen and accept connection from TX side
+    /**
+     * setup, then listen and accept connection from TX side
+     */
     void socketSetup();
 
-    // receive file name, file sha, file data. Write file data to a file created with the same file name
+    /**
+     * receive file name, file sha, file data. Write file data to a file created with the same file name
+     */
     void receive();
 
-    // generates sharsum of the file created, compare it to the shasum received
-    static bool verify(const string &fileName, const string &sum);
+    /**
+     * generates shasum of the file created, compare it to the shasum received
+     * @param fileName std::string
+     * @param sum std::string
+     * @return true if sum match, false otherwise
+     */
+    bool verify(const std::string &sum);
 };
+
+#endif //LANFT_RX_HPP

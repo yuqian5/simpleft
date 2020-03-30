@@ -1,86 +1,90 @@
 #include "RX.h"
 
-//TODO : deserialize data before writing, enable transfers between machines with different endian.
-//TODO : add encryption, enable secure transfer (RSA), prevent MITM attack
+RX::RX(CMDARGS &cmd) {
+    // copy commandline arguments
+    this->info = cmd;
+
+    // initialize socket
+    socketSetup();
+
+    // receive file
+    receive();
+}
+
+RX::~RX() {
+    // shutdown sockets
+    shutdown(this->listenfd, O_RDWR);
+    close(this->listenfd);
+    shutdown(this->connectfd, O_RDWR);
+    close(this->connectfd);
+}
 
 void RX::socketSetup() {
-    //struct setup
-    address.sin_family = AF_INET;
-    address.sin_port = htons(info.port);
-    if (inet_pton(AF_INET, info.ip.c_str(), &(address.sin_addr)) != 1) {
-        std::cerr << "inet_pton failed" << std::endl;
-        exit(1);
-    }
+    // init socket
+    this->listenfd = socket(AF_INET6, SOCK_STREAM, 0);
+    memset(&this->serverAddr, 0, sizeof(this->serverAddr));
 
-    //init socket
-    rxSocket = socket(PF_INET, SOCK_STREAM, 0);
-    if (rxSocket < 0) {
-        std::cerr << "socket() failed" << std::endl;
-        exit(1);
-    }
+    this->serverAddr.sin6_family = AF_INET6;
+    this->serverAddr.sin6_port = htons(this->info.port);
+    this->serverAddr.sin6_addr = in6addr_any;
+
+    // set to accept ipv4 protocol
+    int no = 0;
+    setsockopt(this->listenfd, IPPROTO_IPV6, IPV6_V6ONLY, (void *) &no, sizeof(no));
 
     //bind socket
-    if (bind(rxSocket, (struct sockaddr *) &address, sizeof(address)) < 0) {
-        std::cerr << "bind failed" << std::endl;
-        exit(1);
-    }
+    bind(this->listenfd, (struct sockaddr *) &this->serverAddr, sizeof(this->serverAddr));
 
     //listen
-    if (listen(rxSocket, BACKLOG) != 0) {
-        std::cerr << "listen failed" << std::endl;
-        exit(1);
-    }
+    listen(this->listenfd, BACKLOG);
+    std::cout << "Connecting...";
 
     //accept
-    socklen_t addr_size = sizeof receive_storage;
-    newRxSocket = accept(rxSocket, (struct sockaddr *) &receive_storage, &addr_size);
-    std::cout << "Socket Connected" << std::endl;
+    socklen_t addrSize = sizeof dataStorage;
+    this->connectfd = accept(this->listenfd, (struct sockaddr *) &this->dataStorage, &addrSize);
+    std::cout << "Connected\n";
 }
 
 void RX::receive() {
-    string FileName;
-    string shasum;
-    char newMsg[2048];
-    int fileName_length;
-    int fileSize;
-
-    //get fileName length
-    recv(newRxSocket, newMsg, 3, 0);
-    try { fileName_length = stoi(newMsg, nullptr, 10); }
-    catch (invalid_argument &e) {
-        std::cerr << "error converting filename size" << std::endl;
-        exit(1);
-    }
-    memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
+    std::string FileName;
+    std::string shasum;
+    char readBuf[2048];
+    memset(readBuf, 0, sizeof(readBuf));
+    int fileSize = 0;
 
     //get fileName
-    recv(newRxSocket, newMsg, fileName_length, 0);
-    FileName = newMsg;
-    memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
+    recv(this->connectfd, readBuf, sizeof(readBuf), 0);
+    FileName = readBuf;
+    memset(readBuf, 0, sizeof(readBuf)); // reset readBuf
+
+    //send confirmation
+    write(this->connectfd, "1", 1);
 
     //get sha265 sum
-    recv(newRxSocket, newMsg, 64, 0);
-    shasum = newMsg;
-    memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
+    recv(this->connectfd, readBuf, sizeof(readBuf), 0);
+    shasum = readBuf;
+    memset(readBuf, 0, sizeof(readBuf)); // reset readBuf
+
+    //send confirmation
+    write(this->connectfd, "1", 1);
 
     //get fileSize
-    recv(newRxSocket, newMsg, 13, 0);
-    try { fileSize = stoi(newMsg, nullptr, 10); }
-    catch (invalid_argument &e) {
-        std::cerr << "error converting fileSize size" << std::endl;
+    recv(this->connectfd, readBuf, sizeof(readBuf), 0);
+    try {
+        fileSize = std::stoi(readBuf, nullptr, 10);
+    } catch (std::invalid_argument &e) {
+        std::cerr << "ERROR: Error converting fileSize size" << std::endl;
         exit(1);
     }
 
-    //print out info
-    cout << "File Name: " << FileName << endl;
-    cout << "File Size: " << fileSize << endl;
-    cout << "SHA265 Sum: " << shasum << endl;
+    //send confirmation
+    write(this->connectfd, "1", 1);
 
     //create file using the fileName received from socket
     FILE *fdout;
-    fdout = fopen(FileName.c_str(), "wb");
+    fdout = fopen("tempFilePackage.tar.gz", "wb");
     if (fdout == nullptr) {
-        std::cerr << "an error occurred while opening file " << errno << std::endl;
+        perror("ERROR: Error occurred while creating file");
         exit(1);
     }
 
@@ -93,43 +97,38 @@ void RX::receive() {
             fileSize -= chunkSize;
         }
         //no more message if recvRET become 0, stop receiving
-        int recvRET = recv(newRxSocket, newMsg, chunkSize, 0);
+        int recvRET = recv(this->connectfd, readBuf, chunkSize, 0);
         if (recvRET == 0) {
             break;
         }
-        fwrite(newMsg, chunkSize,1 ,fdout);
-        memset(newMsg, 0, sizeof(newMsg)); // reset newMsg
+        fwrite(readBuf, chunkSize, 1, fdout);
+        memset(readBuf, 0, sizeof(readBuf)); // reset readBuf
     }
 
     fclose(fdout);
 
-    //change file permission so it can be read without sudo privilege
-    string cmd = "chmod 666 ";
-    cmd += FileName;
-    system(cmd.c_str());
-
-    if (verify(FileName, shasum)) {
-        cout << "File Received and Verified" << endl;
+    if (verify(shasum)) {
+        std::cout << FileName << " Received And Verified" << std::endl;
     } else {
-        cout << "File was received but cannot be verified" << endl;
+        std::cout << "DANGER: File Was Received But Cannot Be Verified, File Deleted" << std::endl;
+        // remove file
+        deleteFile();
     }
 
-    if (info.filePath == ("lanft_temp.tar.gz")) {
-        cout << "Received a packed directory, unpacking now...";
-        unpackDir();
-        cout << "done" << endl;
-    }
+    std::cout << "\nUnpacking File...";
+    unpackFile();
+    deleteFile();
+    std::cout << "Done\n";
 }
 
 //verifies the file received by checking it sha265 sum against the one transferred.
-bool RX::verify(const string &fileName, const string &sum) {
+bool RX::verify(const std::string &sum) {
     //check shasum
-    string result, result_temp;
-    result_temp = shasum(fileName);
-    result = result_temp.substr(0, result_temp.find(' '));
+    std::string result;
+    result = shasum();
 
     if (result != sum) {
-        std::cerr << "File Verification failed" << std::endl;
+        std::cerr << "File Verification Failed" << std::endl;
         return false;
     }
     return true;
