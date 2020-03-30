@@ -6,17 +6,13 @@ Transfers a file/directory to another machine connected to LAN using TCP socket.
 ## Install/Uninstall
 * Compile and Install
 
+        cmake CMakeLists.txt
         make
         make install
     
 * Uninstall
 
         make uninstall
-        
-* Default install path (require sudo privilege):
-    
-        /usr/local/bin/
-
 
 ## Usage
  * receive:
