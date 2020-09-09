@@ -1,4 +1,4 @@
-#include "misc.hpp"
+#include "../include/misc.hpp"
 
 bool checkPort(const std::string &port_str) {
     int port;

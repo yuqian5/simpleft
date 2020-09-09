@@ -1,0 +1,7 @@
+/Users/kerrycao/Documents/Programming/C++Project/LANFileTransfer/source/CMakeFiles/install/local.dir
+/Users/kerrycao/Documents/Programming/C++Project/LANFileTransfer/source/CMakeFiles/install/strip.dir
+/Users/kerrycao/Documents/Programming/C++Project/LANFileTransfer/source/CMakeFiles/lanft.dir
+/Users/kerrycao/Documents/Programming/C++Project/LANFileTransfer/source/CMakeFiles/install.dir
+/Users/kerrycao/Documents/Programming/C++Project/LANFileTransfer/source/CMakeFiles/list_install_components.dir
+/Users/kerrycao/Documents/Programming/C++Project/LANFileTransfer/source/CMakeFiles/rebuild_cache.dir
+/Users/kerrycao/Documents/Programming/C++Project/LANFileTransfer/source/CMakeFiles/edit_cache.dir

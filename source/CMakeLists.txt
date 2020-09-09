@@ -28,7 +28,7 @@ IF (NOT SHASUM)
 ENDIF (NOT SHASUM)
 
 # add project file
-ADD_EXECUTABLE(lanft main.cpp TX.hpp TX.cpp RX.hpp RX.cpp misc.hpp misc.cpp Transceiver.hpp Transceiver.cpp)
+ADD_EXECUTABLE(lanft src/main.cpp include/TX.hpp src/TX.cpp include/RX.hpp src/RX.cpp include/misc.hpp src/misc.cpp include/Transceiver.hpp src/Transceiver.cpp)
 
 # install
 INSTALL(TARGETS lanft DESTINATION bin)

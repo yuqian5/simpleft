@@ -1,8 +1,8 @@
 #include <iostream>
 
-#include "TX.hpp"
-#include "RX.hpp"
-#include "misc.hpp"
+#include "../include/TX.hpp"
+#include "../include/RX.hpp"
+#include "../include/misc.hpp"
 
 int main(int argc, char *argv[]) {
     //get and sanitize cmd arguments store in struct CMDARGS

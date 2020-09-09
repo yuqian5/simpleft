@@ -1,4 +1,4 @@
-#include "TX.hpp"
+#include "../include/TX.hpp"
 
 TX::TX(CMDARGS cmd) {
     // copy commandline arguments

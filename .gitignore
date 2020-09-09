@@ -1,7 +1,7 @@
 cmake-build-debug/
 .idea/
 .DS_Store
-cmake-build-debug-gcc--g/
+cmake-build-*/
 *.h.gch
 *.out
 lanft
