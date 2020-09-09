@@ -9,10 +9,6 @@ Transfers a file/directory to another machine connected to LAN using TCP socket.
         cmake CMakeLists.txt
         make
         make install
-    
-* Uninstall
-
-        make uninstall
 
 ## Usage
  * receive:

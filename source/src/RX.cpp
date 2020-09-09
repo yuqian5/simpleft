@@ -1,4 +1,4 @@
-#include "RX.hpp"
+#include "../include/RX.hpp"
 
 RX::RX(CMDARGS &cmd) {
     // copy commandline arguments
