@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <cstring>
 
 #include "misc.hpp"
 #include "Transceiver.hpp"
