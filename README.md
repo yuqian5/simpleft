@@ -1,11 +1,23 @@
 # simpleft
 
-## About
+## Menu
+- [About](#description)
+- [Install](#install)
+    - [Homebrew](#homebrew)
+    - [Compile from source](#compile-from-source)
+- [Usage](#usage)
+
+## Description
 **simpleft** is a lightweight command-line tool designed to simplify p2p file sharing within a network environment. 
 It does not require a centralized server or any complex configuration. It is designed to be simple and easy to use.
 
-## Install/Uninstall
-* Compile and Install
+## Install
+### Homebrew
+* 
+        brew tap yuqian5/simpleft
+        brew install simpleft
+
+### Compile from source
 * 
         cmake CMakeLists.txt
         make
