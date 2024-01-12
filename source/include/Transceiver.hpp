@@ -1,32 +1,31 @@
 #include <iostream>
 
-#ifndef LANFT_Transceiver_HPP
-#define LANFT_Transceiver_HPP
+#ifndef FT_Transceiver_HPP
+#define FT_Transceiver_HPP
 
 class Transceiver {
 protected:
     /**
-     * tar a directory provided to tempFilePackage.tar.gz
+     * pack a directory provided to .ft_temp_pack.tar.gz
      * @param path std::string
      * @return true if success, false otherwise
      */
-    bool packFile(const std::string &path);
+    static bool packFile(const std::string &path);
 
     /**
-     * untar tempFilePackage.tar.gz
+     * unpack .ft_temp_pack.tar.gz
      */
-    void unpackFile();
+    static void unpackFile();
 
     /**
-     * delete tempFilePackage.tar.gz
+     * delete .ft_temp_pack.tar.gz
      */
-    void deleteFile();
+    static void deletePackedFile();
 
     /**
-     * calculate the shasum 256 of tempFilePackage.tar.gz
-     * @return shasum as std::string
+     * delete .ft_temp_pack_buffer.tar.gz
      */
-    std::string shasum() noexcept(false);
+    static void deletePackedBufferFile();
 };
 
-#endif //LANFT_Transceiver_HPP
+#endif //FT_Transceiver_HPP

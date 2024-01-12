@@ -1,5 +1,5 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
-PROJECT(lanft)
+PROJECT(ft)
 
 # set cpp standard
 SET(CMAKE_CXX_STANDARD 17)
@@ -20,16 +20,16 @@ IF (NOT TAR)
     RETURN()
 ENDIF (NOT TAR)
 
-# find shasum, required
-FIND_PROGRAM(SHASUM shasum)
-IF (NOT SHASUM)
-    MESSAGE(FATAL_ERROR "shasum not found")
-    RETURN()
-ENDIF (NOT SHASUM)
-
 # add project file
-ADD_EXECUTABLE(lanft src/main.cpp include/TX.hpp src/TX.cpp include/RX.hpp src/RX.cpp include/misc.hpp src/misc.cpp include/Transceiver.hpp src/Transceiver.cpp)
+ADD_EXECUTABLE(ft
+        src/main.cpp
+        include/TX.hpp src/TX.cpp
+        include/RX.hpp src/RX.cpp
+        include/misc.hpp src/misc.cpp
+        include/Transceiver.hpp src/Transceiver.cpp
+        include/Packet.hpp src/Packet.cpp
+        include/Logging.hpp src/Logging.cpp)
 
 # install
-INSTALL(TARGETS lanft DESTINATION bin)
+INSTALL(TARGETS ft DESTINATION bin)
 

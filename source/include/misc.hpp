@@ -4,15 +4,14 @@
 #pragma once
 
 /**
- * struct which stores all info passed from commandline
+ * struct which stores all cmdArgs passed from commandline
  */
-struct CMDARGS {
+struct CMD_ARGS {
     int mode; // rx = 1, tx = 2
     std::string ip; // ip stored as a string
     std::string standard; // ipv4 or ipv6
     int port; // port number
     std::string filePath; // path to the file, or directory
-    bool directory; // indicate of filePath points to a folder
 };
 
 /**
@@ -32,32 +31,31 @@ bool checkIP(const std::string &IP_str);
 /**
  * extract ip serverAddr from command line argument
  * @param argv_str std::string
- * @param cmdargs CMDARGS
+ * @param cmdArgs CMD_ARGS
  * @return true if success, false otherwise
  */
-bool extractIP(const std::string &argv_str, CMDARGS &cmdargs);
+bool extractIP(const std::string &argv_str, CMD_ARGS &cmdArgs);
 
 /**
 * extract port number from command line argument
 * @param argv_str std::string
-* @param cmdargs CMDARGS
+* @param cmdArgs CMD_ARGS
 * @return true if success, false otherwise
 */
-bool extractPort(const std::string &argv_str, CMDARGS &cmdargs);
+bool extractPort(const std::string &argv_str, CMD_ARGS &cmdArgs);
 
 /**
 * extract mode from command line argument
 * @param argv_str std::string
-* @param cmdargs CMDARGS
+* @param cmdArgs CMD_ARGS
 * @return true if success, false otherwise
 */
-bool extractMode(const std::string &argv_str, CMDARGS &cmdargs);
+bool extractMode(const std::string &argv_str, CMD_ARGS &cmdArgs);
 
 /**
  * parse command line argument
  * @param cmd char**
  * @param argc int
- * @return CMDARGS
+ * @return CMD_ARGS
  */
-CMDARGS parseInput(char *cmd[], int &argc);
-
+CMD_ARGS parseInput(char *cmd[], int &argc);

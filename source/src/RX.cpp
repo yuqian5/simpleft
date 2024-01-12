@@ -1,8 +1,9 @@
 #include "../include/RX.hpp"
+#include "../include/Logging.hpp"
 
-RX::RX(CMDARGS &cmd) {
+RX::RX(CMD_ARGS &cmd) {
     // copy commandline arguments
-    this->info = cmd;
+    this->cmdArgs = cmd;
 
     // initialize socket
     socketSetup();
@@ -13,125 +14,93 @@ RX::RX(CMDARGS &cmd) {
 
 RX::~RX() {
     // shutdown sockets
-    shutdown(this->listenfd, O_RDWR);
-    close(this->listenfd);
-    shutdown(this->connectfd, O_RDWR);
-    close(this->connectfd);
+    shutdown(this->listenFd, O_RDWR);
+    close(this->listenFd);
+    shutdown(this->connectFd, O_RDWR);
+    close(this->connectFd);
 }
 
 void RX::socketSetup() {
     // init socket
-    this->listenfd = socket(AF_INET6, SOCK_STREAM, 0);
+    this->listenFd = socket(AF_INET6, SOCK_STREAM, 0);
     memset(&this->serverAddr, 0, sizeof(this->serverAddr));
 
     this->serverAddr.sin6_family = AF_INET6;
-    this->serverAddr.sin6_port = htons(this->info.port);
+    this->serverAddr.sin6_port = htons(this->cmdArgs.port);
     this->serverAddr.sin6_addr = in6addr_any;
 
     // set to accept ipv4 protocol
     int no = 0;
-    setsockopt(this->listenfd, IPPROTO_IPV6, IPV6_V6ONLY, (void *) &no, sizeof(no));
+    setsockopt(this->listenFd, IPPROTO_IPV6, IPV6_V6ONLY, (void *) &no, sizeof(no));
 
     //bind socket
-    bind(this->listenfd, (struct sockaddr *) &this->serverAddr, sizeof(this->serverAddr));
+    int result = bind(this->listenFd, (struct sockaddr *) &this->serverAddr, sizeof(this->serverAddr));
+    if (result < 0) {
+        Logging::logError("Failed to bind socket");
+        exit(1);
+    }
 
     //listen
-    listen(this->listenfd, BACKLOG);
-    std::cout << "Connecting...";
+    listen(this->listenFd, BACKLOG);
+    Logging::logInfo("Listening for connection");
 
     //accept
     socklen_t addrSize = sizeof dataStorage;
-    this->connectfd = accept(this->listenfd, (struct sockaddr *) &this->dataStorage, &addrSize);
-    std::cout << "Connected\n";
+    this->connectFd = accept(this->listenFd, (struct sockaddr *) &this->dataStorage, &addrSize);
+    Logging::logInfo("Connected");
 }
 
 void RX::receive() {
     std::string FileName;
     std::string shasum;
-    char readBuf[2048];
-    memset(readBuf, 0, sizeof(readBuf));
-    int fileSize = 0;
 
-    //get fileName
-    recv(this->connectfd, readBuf, sizeof(readBuf), 0);
-    FileName = readBuf;
-    memset(readBuf, 0, sizeof(readBuf)); // reset readBuf
-
-    //send confirmation
-    write(this->connectfd, "1", 1);
-
-    //get sha265 sum
-    recv(this->connectfd, readBuf, sizeof(readBuf), 0);
-    shasum = readBuf;
-    memset(readBuf, 0, sizeof(readBuf)); // reset readBuf
-
-    //send confirmation
-    write(this->connectfd, "1", 1);
-
-    //get fileSize
-    recv(this->connectfd, readBuf, sizeof(readBuf), 0);
-    try {
-        fileSize = std::stoi(readBuf, nullptr, 10);
-    } catch (std::invalid_argument &e) {
-        std::cerr << "ERROR: Error converting fileSize size" << std::endl;
-        exit(1);
-    }
-
-    //send confirmation
-    write(this->connectfd, "1", 1);
+    unsigned char packetSizeBuf[4];
+    memset(packetSizeBuf, 0, sizeof(packetSizeBuf));
 
     //create file using the fileName received from socket
     FILE *fdout;
-    fdout = fopen("tempFilePackage.tar.gz", "wb");
+    fdout = fopen(".ft_temp_pack_buffer.tar.gz", "wb");
     if (fdout == nullptr) {
-        perror("ERROR: Error occurred while creating file");
+        Logging::logError("Unable to create buffer file");
         exit(1);
     }
 
-    //receive until the other side does a orderly shutdown
+    //receive until the other side does an orderly shutdown
     while (true) {
-        int chunkSize = 2048;
-        if (chunkSize > fileSize) {
-            chunkSize = fileSize;
-        } else {
-            fileSize -= chunkSize;
+        // receive packet size header
+        size_t result = recv(this->connectFd, packetSizeBuf, PACKET_HEADER_SIZE, 0); // read the first 4 bytes of the packet (size header)
+        if (result != 4) {
+            Logging::logError("Fatal Error - Packet Size Mismatch");
+            exit(1);
         }
-        //no more message if recvRET become 0, stop receiving
-        int recvRET = recv(this->connectfd, readBuf, chunkSize, 0);
-        if (recvRET == 0) {
+        // convert packet size header to int
+        unsigned int packetSize = (packetSizeBuf[0] << 24) | (packetSizeBuf[1] << 16) | (packetSizeBuf[2] << 8) | packetSizeBuf[3];
+        if (packetSize == 0xFFFFFFFF) { // if packetSize is 0xFFFFFFFF, it means file transfer is complete
+            Logging::logInfo("File received");
             break;
         }
-        fwrite(readBuf, chunkSize, 1, fdout);
-        memset(readBuf, 0, sizeof(readBuf)); // reset readBuf
+
+        // receive packet
+        unsigned char packetBuf[packetSize];
+        memset(packetBuf, 0, sizeof(packetBuf));
+        result = recv(this->connectFd, packetBuf, packetSize, 0); // read the rest of the packet (data)
+        if (result != packetSize) {
+            Logging::logError("Fatal Error - Packet Size Mismatch");
+            exit(1);
+        }
+
+        // send read receipt
+        send(this->connectFd, "OK", 2, 0);
+
+        fwrite(packetBuf, packetSize, 1, fdout);
     }
 
     fclose(fdout);
 
-    if (verify(shasum)) {
-        std::cout << FileName << " Received And Verified" << std::endl;
-    } else {
-        std::cout << "DANGER: File Was Received But Cannot Be Verified, File Deleted" << std::endl;
-        // remove file
-        deleteFile();
-    }
-
-    std::cout << "\nUnpacking File...";
+    Logging::logInfo("Unpacking File");
     unpackFile();
-    deleteFile();
-    std::cout << "Done\n";
-}
-
-//verifies the file received by checking it sha265 sum against the one transferred.
-bool RX::verify(const std::string &sum) {
-    //check shasum
-    std::string result;
-    result = shasum();
-
-    if (result != sum) {
-        std::cerr << "File Verification Failed" << std::endl;
-        return false;
-    }
-    return true;
+    deletePackedBufferFile();
+    Logging::logInfo("File transfer complete");
 }
 
 
