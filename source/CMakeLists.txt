@@ -1,5 +1,5 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
-PROJECT(ft)
+PROJECT(sft)
 
 # set cpp standard
 SET(CMAKE_CXX_STANDARD 17)
@@ -21,7 +21,7 @@ IF (NOT TAR)
 ENDIF (NOT TAR)
 
 # add project file
-ADD_EXECUTABLE(ft
+ADD_EXECUTABLE(sft
         src/main.cpp
         include/TX.hpp src/TX.cpp
         include/RX.hpp src/RX.cpp
@@ -31,5 +31,5 @@ ADD_EXECUTABLE(ft
         include/Logging.hpp src/Logging.cpp)
 
 # install
-INSTALL(TARGETS ft DESTINATION bin)
+INSTALL(TARGETS sft DESTINATION bin)
 
