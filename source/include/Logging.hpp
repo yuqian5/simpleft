@@ -1,5 +1,6 @@
 #include <iostream>
 #include <iomanip>
+#include <mutex>
 
 #ifndef FT_LOGGING_H
 #define FT_LOGGING_H
