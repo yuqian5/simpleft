@@ -4,6 +4,7 @@
 
 #include <string>
 #include <cstdlib>
+#include <memory>
 
 class Packet {
 public:
