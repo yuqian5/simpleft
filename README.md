@@ -8,7 +8,7 @@
 - [Usage](#usage)
 
 ## Description
-**simpleft** is a lightweight command-line tool designed to simplify p2p file sharing within a network environment. No server, no configurations, no hassle.
+**simpleft** is a lightweight command-line tool designed to simplify p2p file sharing. No server, no configurations, no hassle.
 
 ## Install
 ### Homebrew
