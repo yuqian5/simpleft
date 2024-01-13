@@ -1,4 +1,5 @@
 # simpleft
+[![CMake on linux and macos](https://github.com/yuqian5/simpleft/actions/workflows/cmake-multi-platform.yml/badge.svg?branch=master)](https://github.com/yuqian5/simpleft/actions/workflows/cmake-multi-platform.yml)
 
 ## Menu
 - [About](#description)
