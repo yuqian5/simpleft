@@ -1,3 +1,6 @@
+#ifndef FT_RX_HPP
+#define FT_RX_HPP
+
 #include <unistd.h>
 #include <iostream>
 #include <sys/socket.h>
@@ -6,14 +9,12 @@
 #include <fcntl.h>
 #include <cstring>
 
-
 #include "misc.hpp"
 #include "Transceiver.hpp"
+#include "Logging.hpp"
+#include "NetworkUtility.hpp"
 
 #define BACKLOG 1
-
-#ifndef FT_RX_HPP
-#define FT_RX_HPP
 
 class RX : protected Transceiver {
 public:

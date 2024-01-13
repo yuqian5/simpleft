@@ -1,5 +1,4 @@
 #include "../include/RX.hpp"
-#include "../include/Logging.hpp"
 
 RX::RX(CMD_ARGS &cmd) {
     // copy commandline arguments
@@ -51,10 +50,10 @@ void RX::socketSetup() {
 }
 
 void RX::receive() {
-    std::string FileName;
-    std::string shasum;
+    // log receiving
+    Logging::logInfo("Receiving package");
 
-    unsigned char packetSizeBuf[4];
+    unsigned char packetSizeBuf[PACKET_HEADER_SIZE];
     memset(packetSizeBuf, 0, sizeof(packetSizeBuf));
 
     //create file using the fileName received from socket
@@ -68,11 +67,12 @@ void RX::receive() {
     //receive until the other side does an orderly shutdown
     while (true) {
         // receive packet size header
-        size_t result = recv(this->connectFd, packetSizeBuf, PACKET_HEADER_SIZE, 0); // read the first 4 bytes of the packet (size header)
-        if (result != 4) {
-            Logging::logError("Fatal Error - Packet Size Mismatch");
+        auto result = NetworkUtility::recvAll(this->connectFd, packetSizeBuf, PACKET_HEADER_SIZE, PACKET_HEADER_SIZE);
+        if (result) {
+            Logging::logError("Fatal Error - Packet Header Lost");
             exit(1);
         }
+
         // convert packet size header to int
         unsigned int packetSize = (packetSizeBuf[0] << 24) | (packetSizeBuf[1] << 16) | (packetSizeBuf[2] << 8) | packetSizeBuf[3];
         if (packetSize == 0xFFFFFFFF) { // if packetSize is 0xFFFFFFFF, it means file transfer is complete
@@ -82,24 +82,30 @@ void RX::receive() {
 
         // receive packet
         unsigned char packetBuf[packetSize];
-        memset(packetBuf, 0, sizeof(packetBuf));
-        result = recv(this->connectFd, packetBuf, packetSize, 0); // read the rest of the packet (data)
-        if (result != packetSize) {
-            Logging::logError("Fatal Error - Packet Size Mismatch");
+        result = NetworkUtility::recvAll(this->connectFd, packetBuf, packetSize, packetSize);
+        if (result) {
+            Logging::logError("Fatal Error - Broken Socket");
             exit(1);
         }
 
         // send read receipt
         send(this->connectFd, "OK", 2, 0);
 
+        // write to received buffer to file
         fwrite(packetBuf, packetSize, 1, fdout);
     }
 
+    // close file
     fclose(fdout);
 
+    // un-package file
     Logging::logInfo("Unpacking File");
     unpackFile();
+
+    // delete temp buffer file
     deletePackedBufferFile();
+
+    // log complete
     Logging::logInfo("File transfer complete");
 }
 

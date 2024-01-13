@@ -2,7 +2,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 PROJECT(sft)
 
 # set cpp standard
-SET(CMAKE_CXX_STANDARD 17)
+SET(CMAKE_CXX_STANDARD 20)
 
 # set compile flag
 SET(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra")
@@ -28,7 +28,9 @@ ADD_EXECUTABLE(sft
         include/misc.hpp src/misc.cpp
         include/Transceiver.hpp src/Transceiver.cpp
         include/Packet.hpp src/Packet.cpp
-        include/Logging.hpp src/Logging.cpp)
+        include/Logging.hpp src/Logging.cpp
+        include/NetworkUtility.hpp src/NetworkUtility.cpp
+)
 
 # install
 INSTALL(TARGETS sft DESTINATION bin)
