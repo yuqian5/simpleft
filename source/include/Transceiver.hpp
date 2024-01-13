@@ -1,7 +1,8 @@
-#include <iostream>
-
 #ifndef FT_Transceiver_HPP
 #define FT_Transceiver_HPP
+
+#include <iostream>
+#include <cstring>
 
 class Transceiver {
 protected:

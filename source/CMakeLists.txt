@@ -30,6 +30,7 @@ ADD_EXECUTABLE(sft
         include/Packet.hpp src/Packet.cpp
         include/Logging.hpp src/Logging.cpp
         include/NetworkUtility.hpp src/NetworkUtility.cpp
+        include/sft_constants.hpp
 )
 
 # install

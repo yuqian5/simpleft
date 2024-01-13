@@ -67,29 +67,29 @@ void RX::receive() {
     //receive until the other side does an orderly shutdown
     while (true) {
         // receive packet size header
-        auto result = NetworkUtility::recvAll(this->connectFd, packetSizeBuf, PACKET_HEADER_SIZE, PACKET_HEADER_SIZE);
-        if (result) {
+        auto success = NetworkUtility::recvAll(this->connectFd, packetSizeBuf, PACKET_HEADER_SIZE, PACKET_HEADER_SIZE);
+        if (!success) {
             Logging::logError("Fatal Error - Packet Header Lost");
             exit(1);
         }
 
         // convert packet size header to int
         unsigned int packetSize = (packetSizeBuf[0] << 24) | (packetSizeBuf[1] << 16) | (packetSizeBuf[2] << 8) | packetSizeBuf[3];
-        if (packetSize == 0xFFFFFFFF) { // if packetSize is 0xFFFFFFFF, it means file transfer is complete
+        if (packetSize == PACKET_TERMINATION_HEADER) {
             Logging::logInfo("File received");
             break;
         }
 
         // receive packet
         unsigned char packetBuf[packetSize];
-        result = NetworkUtility::recvAll(this->connectFd, packetBuf, packetSize, packetSize);
-        if (result) {
+        success = NetworkUtility::recvAll(this->connectFd, packetBuf, packetSize, packetSize);
+        if (!success) {
             Logging::logError("Fatal Error - Broken Socket");
             exit(1);
         }
 
         // send read receipt
-        send(this->connectFd, "OK", 2, 0);
+        send(this->connectFd, READ_RECEIPT, READ_RECEIPT_SIZE, 0);
 
         // write to received buffer to file
         fwrite(packetBuf, packetSize, 1, fdout);

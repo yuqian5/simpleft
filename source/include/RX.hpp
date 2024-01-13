@@ -13,8 +13,7 @@
 #include "Transceiver.hpp"
 #include "Logging.hpp"
 #include "NetworkUtility.hpp"
-
-#define BACKLOG 1
+#include "sft_constants.hpp"
 
 class RX : protected Transceiver {
 public:
@@ -23,8 +22,6 @@ public:
     ~RX();
 
 private:
-    const size_t PACKET_HEADER_SIZE = 4;
-
     CMD_ARGS cmdArgs;
 
     int listenFd;

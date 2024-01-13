@@ -1,7 +1,4 @@
-#include <thread>
 #include "../include/TX.hpp"
-#include "../include/Packet.hpp"
-#include "../include/Logging.hpp"
 
 TX::TX(CMD_ARGS cmd) {
     // copy commandline arguments
@@ -66,7 +63,7 @@ void TX::socketSetup() {
     if (cmdArgs.standard == "ipv4") { // ipv4
         // initialize socket
         this->connectFd = socket(AF_INET, SOCK_STREAM, 0);
-        memset(&this->serverAddr4, '0', sizeof(this->serverAddr4));
+        memset(&this->serverAddr4, 0, sizeof(this->serverAddr4));
 
         this->serverAddr4.sin_family = AF_INET;
         this->serverAddr4.sin_port = htons(cmdArgs.port);
@@ -79,7 +76,7 @@ void TX::socketSetup() {
     } else { // ipv6
         // initialize socket
         this->connectFd = socket(AF_INET6, SOCK_STREAM, 0);
-        memset(&this->serverAddr6, '0', sizeof(this->serverAddr6));
+        memset(&this->serverAddr6, 0, sizeof(this->serverAddr6));
 
         this->serverAddr6.sin6_family = AF_INET6;
         this->serverAddr6.sin6_port = htons(this->cmdArgs.port);
@@ -92,7 +89,7 @@ void TX::socketSetup() {
     }
 }
 
-void TX::transmit() {
+void TX::transmit() const {
     // pack file
     Logging::logInfo("Packaging file(s)");
     if (!packFile(cmdArgs.filePath)) {
@@ -100,8 +97,7 @@ void TX::transmit() {
         exit(0);
     }
 
-    char inboundDataBuffer[16];
-    memset(inboundDataBuffer, 0, sizeof(inboundDataBuffer));
+    char readReceiptBuffer[READ_RECEIPT_SIZE];
 
     // get file cmdArgs
     FILE *inputFd;
@@ -121,12 +117,10 @@ void TX::transmit() {
 
     // send file
     Logging::logInfo("Sending file(s)");
-    unsigned char outboundDataBuffer[2048];
+    unsigned char outboundDataBuffer[MAX_PACKET_SIZE];
     memset(outboundDataBuffer, 0, sizeof(outboundDataBuffer));
 
     size_t fileSize = fileInfo.st_size;
-
-    int sentCount = 0;
 
     while (fileSize != 0) {
         // read chunk from file
@@ -139,22 +133,22 @@ void TX::transmit() {
         memset(outboundDataBuffer, 0, sizeof(outboundDataBuffer)); // reset outboundDataBuffer
 
         // send packet
-        send(this->connectFd, packet.get(), readSize + 4, 0);
+        auto success = NetworkUtility::sendAll(this->connectFd, packet.get(), readSize + 4);
+        if (!success) {
+            Logging::logError("Fatal error - Broken Socket");
+            exit(1);
+        }
 
         // wait for read receipt
-        recv(this->connectFd, inboundDataBuffer, 2, 0);
-        memset(inboundDataBuffer, 0, sizeof(inboundDataBuffer));
+        recv(this->connectFd, readReceiptBuffer, READ_RECEIPT_SIZE, 0);
 
         // update progress bar
-        sentCount++;
-        if (sentCount % 500 == 0) {
-            Logging::logProgress(fileInfo.st_size - fileSize, fileInfo.st_size, false);
-        }
+        Logging::logProgress(fileInfo.st_size - fileSize, fileInfo.st_size, false);
     }
 
     // send end packet
     auto terminationPacket = Packet::generateTerminationPacket();
-    send(this->connectFd, terminationPacket.get(), 4, 0);
+    NetworkUtility::sendAll(this->connectFd, terminationPacket.get(), PACKET_HEADER_SIZE);
 
     // log complete
     Logging::logProgress(1, 1, true);

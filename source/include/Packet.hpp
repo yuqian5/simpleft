@@ -1,7 +1,6 @@
 #ifndef FT_PACKET_HPP
 #define FT_PACKET_HPP
 
-
 #include <string>
 #include <cstdlib>
 #include <memory>

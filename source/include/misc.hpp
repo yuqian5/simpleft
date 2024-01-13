@@ -1,7 +1,12 @@
+#ifndef SFT_MISC_HPP
+#define SFT_MISC_HPP
+
 #include <iostream>
 #include <regex>
+#include <iomanip>
+#include <sys/stat.h>
 
-#pragma once
+#include "Logging.hpp"
 
 /**
  * struct which stores all cmdArgs passed from commandline
@@ -59,3 +64,5 @@ bool extractMode(const std::string &argv_str, CMD_ARGS &cmdArgs);
  * @return CMD_ARGS
  */
 CMD_ARGS parseInput(char *cmd[], int &argc);
+
+#endif //SFT_MISC_HPP
