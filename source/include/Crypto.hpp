@@ -6,15 +6,24 @@
 #include <string>
 
 /**
- * Thin C++ facade over TweetNaCl. Hides the NaCl zero-padding contract
- * (which is easy to get wrong) and the raw buffer pointers from callers.
+ * Backend-agnostic crypto facade. Exactly one backend implementation
+ * (e.g. src/crypto/Crypto_tweetnacl.cpp) is linked at build time, selected
+ * by the CMake option SFT_CRYPTO_BACKEND. Adding a new backend means
+ * dropping a new .cpp under src/crypto/ that implements every method
+ * declared below; nothing outside Crypto.hpp / Crypto_*.cpp needs to
+ * change.
  *
- * Primitives in use:
- *   * Curve25519 for ephemeral key agreement
+ * Primitive contract (all backends must satisfy):
+ *   * Curve25519 (or X25519) for ephemeral key agreement
  *   * SHA-512 to mix the passphrase into the derived key
- *   * XSalsa20-Poly1305 for per-packet authenticated encryption
+ *   * An AEAD with 24-byte nonce and 16-byte tag (XSalsa20-Poly1305,
+ *     XChaCha20-Poly1305, or equivalent) for per-packet encryption
  *
- * Buffer sizes are defined in sft_constants.hpp.
+ * Wire format does not depend on the backend - all buffer sizes are
+ * fixed in sft_constants.hpp, so two endpoints can interoperate as long
+ * as they pick AEADs with compatible nonce/tag sizes. Mixing TweetNaCl
+ * (XSalsa20) with monocypher (XChaCha20) does NOT interop because the
+ * stream ciphers differ.
  */
 class Crypto {
 public:

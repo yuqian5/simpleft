@@ -14,12 +14,12 @@
 //
 //   [NONCE_SIZE nonce] [MAC_SIZE tag] [N bytes ciphertext]    = 40 + N bytes
 
-#include "../include/Crypto.hpp"
+#include "../../include/Crypto.hpp"
 
 #include <cstring>
 #include <vector>
 
-#include "../include/sft_constants.hpp"
+#include "../../include/sft_constants.hpp"
 
 extern "C" {
 #include "tweetnacl.h"
