@@ -118,6 +118,11 @@ void TX::socketSetup() {
         // connect
         connectNow(std::ref(this->serverAddr6), std::ref(this->connectFd));
     }
+
+    // Disable Nagle. The data plane streams large frames back-to-back with no
+    // small follow-ups; Nagle's coalescing only adds delayed-ACK stalls.
+    int nodelay = 1;
+    setsockopt(this->connectFd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
 }
 
 void TX::transmit() const {
@@ -127,8 +132,6 @@ void TX::transmit() const {
         Logging::logError("No such file or directory");
         exit(0);
     }
-
-    char readReceiptBuffer[READ_RECEIPT_SIZE];
 
     // get file cmdArgs
     FILE *inputFd;
@@ -146,36 +149,55 @@ void TX::transmit() const {
         exit(1);
     }
 
-    // send file
-    Logging::logInfo("Sending file(s)");
-    unsigned char outboundDataBuffer[MAX_PACKET_SIZE] = {};
-
     size_t fileSize = fileInfo.st_size;
+
+    // Size preamble: first encrypted frame after the handshake is the
+    // 8-byte big-endian uint64 file size, so RX can show a matching
+    // progress bar. RX reads exactly one frame here before entering its
+    // data loop.
+    {
+        unsigned char sizeBuf[8];
+        for (int i = 0; i < 8; i++) {
+            sizeBuf[7 - i] = (fileSize >> (8 * i)) & 0xFF;
+        }
+        size_t preambleLen = 0;
+        auto preamble = Packet::serialize(sizeBuf, 8, this->sharedKey, preambleLen);
+        if (!NetworkUtility::sendAll(this->connectFd, preamble.get(), preambleLen)) {
+            Logging::logError("Fatal error - Broken Socket (size preamble)");
+            exit(1);
+        }
+    }
+
+    Logging::logInfo("Sending file(s)");
+    auto outboundDataBuffer = std::make_unique<unsigned char[]>(MAX_PACKET_SIZE);
+
+    size_t totalSize = fileSize;
+    Logging::logProgressStart(totalSize);
 
     while (fileSize != 0) {
         // read chunk from file
         auto readSize = MAX_PACKET_SIZE > fileSize ? fileSize : MAX_PACKET_SIZE;
-        fread(outboundDataBuffer, readSize, 1, inputFd);
+        fread(outboundDataBuffer.get(), readSize, 1, inputFd);
         fileSize -= readSize;
 
-        // encrypt + frame this chunk
+        // encrypt + frame this chunk. No need to wipe outboundDataBuffer:
+        // the next fread overwrites it, and the same plaintext just went out
+        // over the wire and exists on disk in the tarball - a local wipe
+        // doesn't add anything.
         size_t frameLen = 0;
-        auto frame = Packet::serialize(outboundDataBuffer, readSize, this->sharedKey, frameLen);
-        memset(outboundDataBuffer, 0, sizeof(outboundDataBuffer)); // reset outboundDataBuffer
+        auto frame = Packet::serialize(outboundDataBuffer.get(), readSize, this->sharedKey, frameLen);
 
-        // send packet
+        // send packet (TCP socket buffer + flow control provide pacing;
+        // no application-level ACK needed)
         auto success = NetworkUtility::sendAll(this->connectFd, frame.get(), frameLen);
         if (!success) {
             Logging::logError("Fatal error - Broken Socket");
             exit(1);
         }
 
-        // wait for read receipt
-        recv(this->connectFd, readReceiptBuffer, READ_RECEIPT_SIZE, 0);
-
-        // update progress bar
-        Logging::logProgress(fileInfo.st_size - fileSize, fileInfo.st_size, false);
+        Logging::logProgressUpdate(totalSize - fileSize);
     }
+    Logging::logProgressFinish();
 
     // end-of-stream marker: encrypted empty-payload frame. Authenticated by
     // the same MAC mechanism as data frames, so an attacker cannot inject a
@@ -184,13 +206,12 @@ void TX::transmit() const {
     auto terminationPacket = Packet::generateTerminationPacket(this->sharedKey, termLen);
     NetworkUtility::sendAll(this->connectFd, terminationPacket.get(), termLen);
 
-    // log complete
-    Logging::logProgress(1, 1, true);
-
     // close file
     fclose(inputFd);
 
     // remove file
     deletePackedFile();
+
+    Logging::logSuccess("Transfer complete");
 }
 

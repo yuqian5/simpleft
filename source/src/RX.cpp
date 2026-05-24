@@ -79,6 +79,12 @@ bool RX::acceptConnection() {
         Logging::logError("Failed to accept connection");
         return false;
     }
+
+    // Disable Nagle. The data plane streams large frames back-to-back with no
+    // small follow-ups; Nagle's coalescing only adds delayed-ACK stalls.
+    int nodelay = 1;
+    setsockopt(this->connectFd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+
     Logging::logInfo("Connected");
     return true;
 }
@@ -121,9 +127,36 @@ bool RX::handshake() {
     return true;
 }
 
-bool RX::receive() {
-    Logging::logInfo("Receiving package");
+// Read one encrypted frame from the socket, decrypt, and return the
+// plaintext. Returns an empty unique_ptr (with plainLen unchanged) on any
+// failure - caller logs and returns false.
+static std::unique_ptr<unsigned char[]> readOneFrame(
+        int connectFd, const unsigned char *key,
+        size_t &plainLen, const char *whatForLog) {
+    unsigned char header[PACKET_HEADER_SIZE];
+    if (!NetworkUtility::recvAll(connectFd, header, PACKET_HEADER_SIZE, PACKET_HEADER_SIZE)) {
+        Logging::logError(std::string("Fatal Error - ") + whatForLog + " header lost");
+        return nullptr;
+    }
+    unsigned int bodyLen = (header[0] << 24) | (header[1] << 16) | (header[2] << 8) | header[3];
+    if (bodyLen < CRYPTO_OVERHEAD || bodyLen > MAX_PACKET_SIZE + CRYPTO_OVERHEAD) {
+        Logging::logError(std::string("Fatal Error - implausible ") + whatForLog + " size");
+        return nullptr;
+    }
+    auto body = std::make_unique<unsigned char[]>(bodyLen);
+    if (!NetworkUtility::recvAll(connectFd, body.get(), bodyLen, bodyLen)) {
+        Logging::logError(std::string("Fatal Error - broken socket reading ") + whatForLog);
+        return nullptr;
+    }
+    auto plain = Crypto::decryptPacket(body.get(), bodyLen, key, plainLen);
+    if (!plain) {
+        Logging::logError("Fatal Error - decryption failed (wrong passphrase or tampered data)");
+        return nullptr;
+    }
+    return plain;
+}
 
+bool RX::receive() {
     // RAII wrapper so every error path closes the buffer file
     std::unique_ptr<FILE, decltype(&fclose)> fdout(
             fopen(".ft_temp_pack_buffer.tar.gz", "wb"), &fclose);
@@ -133,52 +166,43 @@ bool RX::receive() {
         exit(1);
     }
 
-    unsigned char packetSizeBuf[PACKET_HEADER_SIZE];
-    memset(packetSizeBuf, 0, sizeof(packetSizeBuf));
+    // First frame after the handshake is the 8-byte file-size preamble.
+    // Used only for the progress display; the authoritative end-of-stream
+    // is still the encrypted empty-payload frame at the end.
+    size_t preambleLen = 0;
+    auto preamble = readOneFrame(this->connectFd, this->sharedKey,
+                                  preambleLen, "size preamble");
+    if (!preamble || preambleLen != 8) {
+        return false;
+    }
+    size_t totalSize = 0;
+    for (int i = 0; i < 8; i++) {
+        totalSize = (totalSize << 8) | preamble[i];
+    }
 
+    Logging::logInfo("Receiving package");
+    Logging::logProgressStart(totalSize);
+
+    size_t received = 0;
     while (true) {
-        // receive packet size header
-        if (!NetworkUtility::recvAll(this->connectFd, packetSizeBuf, PACKET_HEADER_SIZE, PACKET_HEADER_SIZE)) {
-            Logging::logError("Fatal Error - Packet Header Lost");
-            return false;
-        }
-
-        // length covers nonce + MAC + ciphertext; the smallest valid frame
-        // is an empty payload (CRYPTO_OVERHEAD bytes)
-        unsigned int packetSize = (packetSizeBuf[0] << 24) | (packetSizeBuf[1] << 16) | (packetSizeBuf[2] << 8) | packetSizeBuf[3];
-        if (packetSize < CRYPTO_OVERHEAD || packetSize > MAX_PACKET_SIZE + CRYPTO_OVERHEAD) {
-            Logging::logError("Fatal Error - implausible packet size");
-            return false;
-        }
-
-        // receive the encrypted body
-        auto packetBuf = std::make_unique<unsigned char[]>(packetSize);
-        if (!NetworkUtility::recvAll(this->connectFd, packetBuf.get(), packetSize, packetSize)) {
-            Logging::logError("Fatal Error - Broken Socket");
-            return false;
-        }
-
-        // decrypt + verify MAC. A failure here means either wire tampering
-        // or a passphrase mismatch - both abort this transfer.
         size_t plainLen = 0;
-        auto plain = Crypto::decryptPacket(packetBuf.get(), packetSize, this->sharedKey, plainLen);
+        auto plain = readOneFrame(this->connectFd, this->sharedKey, plainLen, "data");
         if (!plain) {
-            Logging::logError("Fatal Error - decryption failed (wrong passphrase or tampered data)");
             return false;
         }
 
         // empty plaintext == end-of-stream marker
         if (plainLen == 0) {
-            Logging::logInfo("File received");
             break;
         }
 
-        // send read receipt (plaintext lock-step pacing signal; not security-critical)
-        send(this->connectFd, READ_RECEIPT, READ_RECEIPT_SIZE, 0);
-
         // write decrypted payload to the buffer file
         fwrite(plain.get(), plainLen, 1, fdout.get());
+
+        received += plainLen;
+        Logging::logProgressUpdate(received);
     }
+    Logging::logProgressFinish();
 
     // flush+close before tar so the extracted file sees the complete tarball
     fdout.reset();
@@ -187,6 +211,6 @@ bool RX::receive() {
     unpackFile();
     deletePackedBufferFile();
 
-    Logging::logInfo("File transfer complete");
+    Logging::logSuccess("Transfer complete");
     return true;
 }

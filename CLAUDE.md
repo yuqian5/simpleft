@@ -100,17 +100,21 @@ Primitives in use:
 [4-byte BE length] [24-byte nonce] [16-byte Poly1305 MAC] [N bytes ciphertext]
 ```
 
-`length` covers everything after itself (`N + CRYPTO_OVERHEAD = N + 40`). `MAX_PACKET_SIZE = 8192` plaintext bytes per chunk. After every data packet the receiver replies with a 2-byte plaintext `"OK"` read receipt (`READ_RECEIPT`); the sender blocks on this before sending the next, so the protocol is strictly lock-step. The receipt is **not** authenticated - it is a pacing signal, not security-critical (an attacker forging OKs only races the legitimate one).
+`length` covers everything after itself (`N + CRYPTO_OVERHEAD = N + 40`). `MAX_PACKET_SIZE = 65536` (64 KiB) plaintext bytes per chunk. After every data packet the receiver replies with a 2-byte plaintext `"OK"` read receipt (`READ_RECEIPT`); the sender blocks on this before sending the next, so the protocol is strictly lock-step. The receipt is **not** authenticated - it is a pacing signal, not security-critical (an attacker forging OKs only races the legitimate one).
 
-**End-of-transfer** is an encrypted frame with an empty plaintext payload (length header = 40, ciphertext = 0 bytes). The receiver decrypts every frame; an empty plaintext signals EOF. The plaintext `0xFFFFFFFF` sentinel from the old protocol no longer exists. Because EOF is authenticated, an attacker cannot inject a fake one to truncate the transfer.
+**Frame ordering after the handshake:**
+1. **Size preamble** - one encrypted frame whose 8-byte plaintext is the big-endian uint64 file size. Lets RX render a matching progress bar without changing the framing format. RX rejects the connection if the first frame's plaintext is not exactly 8 bytes.
+2. **Data frames** - file body in `MAX_PACKET_SIZE` chunks, each ACKed by `"OK"`.
+3. **End-of-stream** - an encrypted frame with an empty plaintext payload (length header = 40, ciphertext = 0 bytes). The receiver decrypts every frame; an empty plaintext signals EOF. Because EOF is authenticated, an attacker cannot inject a fake one to truncate the transfer.
 
 ### Transfer flow
 1. Both sides perform the handshake above (`TX::handshake` / `RX::handshake`).
 2. TX runs `tar -cf .ft_temp_pack.tar.gz <path>` in the **current working directory** (`Transceiver::packFile`, via `fork`+`execvp` - no shell, so user paths cannot inject commands).
-3. TX streams the resulting tarball in `MAX_PACKET_SIZE` chunks. Each chunk is wrapped by `Packet::serialize`, which encrypts with the shared key and prepends the length header. After the last chunk, TX sends an encrypted empty-payload frame via `Packet::generateTerminationPacket`.
-4. RX reads each frame, calls `Crypto::decryptPacket`, treats decrypt failure as fatal (wrong passphrase or tampered data), writes the plaintext to `.ft_temp_pack_buffer.tar.gz`, and breaks on the first empty plaintext.
-5. RX runs `tar -xf` on the buffer (`Transceiver::unpackFile`).
-6. Both sides delete their temp tarball via `popen("rm ...")` (still shells out, but the filename is fixed and not user-controlled).
+3. TX `stat()`s the tarball, then sends the 8-byte file size as the first encrypted frame after the handshake (the "size preamble"). RX reads it via a shared `readOneFrame` helper and rejects the connection if the decrypted plaintext is not exactly 8 bytes.
+4. TX streams the tarball in `MAX_PACKET_SIZE` chunks. Each chunk is wrapped by `Packet::serialize`, which encrypts with the shared key and prepends the length header. After the last chunk, TX sends an encrypted empty-payload frame via `Packet::generateTerminationPacket`.
+5. RX reads each frame, calls `Crypto::decryptPacket`, treats decrypt failure as a per-connection failure (wrong passphrase or tampered data - logged then connection torn down; only fatal in non-loop mode), writes the plaintext to `.ft_temp_pack_buffer.tar.gz`, and breaks on the first empty plaintext.
+6. RX runs `tar -xf` on the buffer (`Transceiver::unpackFile`).
+7. Both sides delete their temp tarball via `popen("rm ...")` (still shells out, but the filename is fixed and not user-controlled).
 
 Consequence: `sft` must be run from a writable directory, and the temp filenames are global within that directory - running two transfers concurrently in the same cwd will collide.
 
@@ -121,4 +125,15 @@ Consequence: `sft` must be run from a writable directory, and the temp filenames
 Lives under `source/{include,src}/cli/`. `ArgParser.cpp::parseInput` walks argv directly (no string concatenation, no `find()`-based substring matching) and recognises whole tokens. `rx` and `tx` are positionals; `-ip4`/`-ip6`/`-p` each consume the next argv token (POSIX-getopt-style - the value is not validated against the flag namespace, so `sft rx -p -k` is a user error that surfaces downstream); `-k` is a boolean and triggers `promptPassphrase()` after argv has fully validated. The file path is a single positional accepted in any position. Per-flag helpers (`checkIP`, `checkPort`, `promptPassphrase`) each live in their own `*Flag.{hpp,cpp}` pair. IP validation uses a single combined IPv4/IPv6 regex in `checkIP` - replace the whole regex if you need to change behaviour; do not edit it in place. Port range is `[1024, 65535]`; out-of-range falls back to `8203` with a warning.
 
 ### Logging
-`Logging` is a static class with a mutex and ANSI colour codes. `logProgress` is rate-limited via `lastLogTime` to avoid spamming the terminal during large transfers - pass `ignoreTimeLimit=true` to force a write (used for the final 100% update).
+`Logging` is a static class with a mutex around stdout/stderr writes. Each status line is prefixed with a Unicode symbol coloured by severity:
+
+| Level | Symbol | Colour | Stream |
+|-------|--------|--------|--------|
+| `logInfo` | `→` | cyan | stdout |
+| `logSuccess` | `✓` | green | stdout |
+| `logWarning` | `⚠` | yellow | stderr |
+| `logError` | `✗` | bold red | stderr |
+
+ANSI escape codes are emitted only when the destination stream is a TTY (cached `isatty()` check at first use). Piping to a file or `tee` produces clean, ANSI-free output that stays grep-able. There are **no timestamps** in the output — the tool is short-lived and interactive; if a caller wants timestamps, they can pipe through `ts(1)`.
+
+Progress uses a three-phase API: `logProgressStart(total)`, `logProgressUpdate(bytesDone)` (throttled to ~5 frames/sec via `steady_clock`), and `logProgressFinish()`. The bar uses U+2588 (`█`) and U+2591 (`░`) block characters and a single `\r` + `\033[K` carriage-return-and-erase redraw, so it updates in place without scroll-spamming. The line shows percentage, bytes done / total, average speed since `logProgressStart`, and ETA (formatted via `humanBytes` / `humanDuration`). When stdout is not a TTY, intermediate updates are dropped — only the final state is written, so log files stay readable. Internal `ProgressState` lives in the anonymous namespace of `Logging.cpp`, not on the class, so the public surface stays clean.

@@ -1,11 +1,9 @@
 #ifndef SFT_SFT_CONSTANTS_HPP
 #define SFT_SFT_CONSTANTS_HPP
 
-#define MAX_PACKET_SIZE 8192
+#define MAX_PACKET_SIZE 1048576
 #define BACKLOG 1
 #define PACKET_HEADER_SIZE 4
-#define READ_RECEIPT "OK"
-#define READ_RECEIPT_SIZE 2
 
 // Sizes from TweetNaCl (curve25519 / xsalsa20-poly1305 / sha512).
 // Duplicated here so the rest of the codebase doesn't have to include

@@ -63,7 +63,6 @@ std::unique_ptr<unsigned char[]> Crypto::encryptPacket(
         size_t &out_len) {
     const size_t padded = crypto_secretbox_ZEROBYTES + len;
     auto in = std::make_unique<unsigned char[]>(padded);
-    auto rawOut = std::make_unique<unsigned char[]>(padded);
 
     // NaCl input contract: 32 leading zeros, then plaintext.
     std::memset(in.get(), 0, crypto_secretbox_ZEROBYTES);
@@ -74,17 +73,18 @@ std::unique_ptr<unsigned char[]> Crypto::encryptPacket(
 
     // Fresh random nonce. 24 bytes is large enough that random collision
     // is negligible (~2^96 messages before risk), so we do not need a counter.
-    randombytes(packet.get(), NONCE_SIZE);
+    unsigned char nonce[NONCE_SIZE];
+    randombytes(nonce, NONCE_SIZE);
 
-    crypto_secretbox(rawOut.get(), in.get(), padded, packet.get(), key);
+    // crypto_secretbox writes [16 zeros][16 MAC][len ciphertext] of length
+    // `padded` to its output buffer. Write it at packet+8 so the trailing
+    // [MAC][ciphertext] lands exactly at the wire offsets we want, then
+    // overlay the nonce on packet[0..24] - that overwrites the 16 leading
+    // zeros NaCl wrote at packet[8..24], which were waste anyway.
+    crypto_secretbox(packet.get() + (NONCE_SIZE - crypto_secretbox_BOXZEROBYTES),
+                     in.get(), padded, nonce, key);
+    std::memcpy(packet.get(), nonce, NONCE_SIZE);
 
-    // rawOut layout: [16 zeros][16 MAC][len ciphertext]. Drop the leading
-    // zeros and copy the rest after the nonce in our wire packet.
-    std::memcpy(packet.get() + NONCE_SIZE,
-                rawOut.get() + crypto_secretbox_BOXZEROBYTES,
-                MAC_SIZE + len);
-
-    zeroize(in.get(), padded);
     return packet;
 }
 
@@ -116,7 +116,6 @@ std::unique_ptr<unsigned char[]> Crypto::decryptPacket(
     std::memcpy(plain.get(),
                 rawOut.get() + crypto_secretbox_ZEROBYTES, out_len);
 
-    zeroize(rawOut.get(), padded);
     return plain;
 }
 
