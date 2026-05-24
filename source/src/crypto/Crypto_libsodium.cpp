@@ -3,15 +3,23 @@
 // Primitives:
 //   * X25519 for ephemeral key agreement (crypto_scalarmult_base + crypto_scalarmult)
 //   * BLAKE2b-256 to mix the passphrase into the derived key (crypto_generichash)
-//   * XChaCha20-Poly1305 AEAD for per-packet encryption
-//     (crypto_secretbox_xchacha20poly1305_easy / _open_easy)
+//   * XChaCha20-Poly1305-IETF AEAD for per-packet encryption
+//     (crypto_aead_xchacha20poly1305_ietf_{encrypt,decrypt})
 //
-// Wire frame layout is identical to the monocypher backend:
+// Wire frame layout is the same as the other backends:
 //   [NONCE_SIZE nonce] [MAC_SIZE tag] [N bytes ciphertext]    = 40 + N bytes
-// and on the AEAD side the bytes are interchangeable with the monocypher
-// backend in principle, BUT the KDF and DH details combine differently
-// enough that you should still treat the two backends as non-interoperable
-// and require both endpoints to be built the same way.
+//
+// This backend IS byte-compatible with the monocypher backend on the data
+// plane (both use IETF XChaCha20-Poly1305 with the same KDF, and produce
+// identical key/nonce/ciphertext/tag bytes given identical inputs), so a
+// monocypher TX can talk to a libsodium RX and vice versa. The tweetnacl
+// backend is XSalsa20-based and is NOT interoperable with either.
+//
+// libsodium's `crypto_secretbox_xchacha20poly1305_easy` would have been the
+// shorter call but it uses the NaCl-secretbox MAC layout (Poly1305 over
+// ciphertext only), not the IETF AEAD MAC (Poly1305 over
+// pad16(AAD)||pad16(ct)||u64_le(len_AAD)||u64_le(len_ct)), and would have
+// MAC-failed against monocypher.
 //
 // Unlike the vendored backends, this one depends on a system-installed
 // libsodium (find_package via pkg-config in CMakeLists.txt). That is the
@@ -36,12 +44,12 @@ static_assert(crypto_scalarmult_BYTES == 32,
               "libsodium X25519 output is not 32 bytes");
 static_assert(crypto_scalarmult_SCALARBYTES == SECRETKEY_SIZE,
               "libsodium X25519 secret key size mismatch");
-static_assert(crypto_secretbox_xchacha20poly1305_NONCEBYTES == NONCE_SIZE,
-              "XChaCha20-Poly1305 nonce size mismatch");
-static_assert(crypto_secretbox_xchacha20poly1305_MACBYTES == MAC_SIZE,
-              "XChaCha20-Poly1305 MAC size mismatch");
-static_assert(crypto_secretbox_xchacha20poly1305_KEYBYTES == SHARED_KEY_SIZE,
-              "XChaCha20-Poly1305 key size mismatch");
+static_assert(crypto_aead_xchacha20poly1305_ietf_NPUBBYTES == NONCE_SIZE,
+              "XChaCha20-Poly1305-IETF nonce size mismatch");
+static_assert(crypto_aead_xchacha20poly1305_ietf_ABYTES == MAC_SIZE,
+              "XChaCha20-Poly1305-IETF tag size mismatch");
+static_assert(crypto_aead_xchacha20poly1305_ietf_KEYBYTES == SHARED_KEY_SIZE,
+              "XChaCha20-Poly1305-IETF key size mismatch");
 
 namespace {
 
@@ -106,13 +114,20 @@ std::unique_ptr<unsigned char[]> Crypto::encryptPacket(
     // collision is negligible (~2^96 messages) so no counter is needed.
     randombytes_buf(packet.get(), NONCE_SIZE);
 
-    // _easy variant lays out output as [MAC (16)][ciphertext (len)], which
-    // matches our wire format starting at packet+NONCE_SIZE - no extra
-    // copies needed.
-    crypto_secretbox_xchacha20poly1305_easy(
-            packet.get() + NONCE_SIZE,   // c (writes MAC || ciphertext here)
+    // IETF AEAD output layout: [ciphertext (len)][tag (16)] - the tag
+    // trails the ciphertext, unlike secretbox which prepends the MAC. Our
+    // wire format places the tag BEFORE the ciphertext, so we point the
+    // _detached variant's two output buffers separately and skip the
+    // trailing-tag layout entirely.
+    unsigned long long mac_len = 0;
+    crypto_aead_xchacha20poly1305_ietf_encrypt_detached(
+            packet.get() + NONCE_SIZE + MAC_SIZE,  // c (ciphertext only)
+            packet.get() + NONCE_SIZE,             // mac
+            &mac_len,
             plaintext, len,
-            packet.get(),                // nonce
+            nullptr, 0,                            // no AAD
+            nullptr,                               // nsec (unused)
+            packet.get(),                          // nonce
             key);
 
     return packet;
@@ -129,11 +144,14 @@ std::unique_ptr<unsigned char[]> Crypto::decryptPacket(
     out_len = in_len - CRYPTO_OVERHEAD;
     auto plain = std::make_unique<unsigned char[]>(out_len);
 
-    int rc = crypto_secretbox_xchacha20poly1305_open_easy(
+    int rc = crypto_aead_xchacha20poly1305_ietf_decrypt_detached(
             plain.get(),
-            in + NONCE_SIZE,             // c = [MAC (16)][ciphertext]
-            MAC_SIZE + out_len,          // clen
-            in,                          // nonce
+            nullptr,                               // nsec (unused)
+            in + NONCE_SIZE + MAC_SIZE,            // ciphertext
+            out_len,
+            in + NONCE_SIZE,                       // mac
+            nullptr, 0,                            // no AAD
+            in,                                    // nonce
             key);
     if (rc != 0) {
         out_len = 0;

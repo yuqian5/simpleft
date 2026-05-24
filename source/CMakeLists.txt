@@ -59,8 +59,8 @@ else()
 endif()
 
 set(SFT_CRYPTO_BACKEND "${_sft_default_backend}" CACHE STRING
-        "Crypto backend to link (monocypher | tweetnacl | libsodium)")
-set_property(CACHE SFT_CRYPTO_BACKEND PROPERTY STRINGS monocypher tweetnacl libsodium)
+        "Crypto backend to link (monocypher | libsodium)")
+set_property(CACHE SFT_CRYPTO_BACKEND PROPERTY STRINGS monocypher libsodium)
 
 # Per-backend outputs consumed below by add_executable / target_*.
 set(SFT_CRYPTO_SOURCES)
@@ -72,13 +72,6 @@ if(SFT_CRYPTO_BACKEND STREQUAL "monocypher")
             src/crypto/Crypto_monocypher.cpp
             lib/monocypher/monocypher.c)
     set(SFT_CRYPTO_INCLUDE_DIRS lib/monocypher)
-
-elseif(SFT_CRYPTO_BACKEND STREQUAL "tweetnacl")
-    set(SFT_CRYPTO_SOURCES
-            src/crypto/Crypto_tweetnacl.cpp
-            lib/tweetnacl/tweetnacl.c
-            lib/tweetnacl/randombytes.c)
-    set(SFT_CRYPTO_INCLUDE_DIRS lib/tweetnacl)
 
 elseif(SFT_CRYPTO_BACKEND STREQUAL "libsodium")
     # Only backend that uses a system-installed library. Vendoring
@@ -94,7 +87,7 @@ elseif(SFT_CRYPTO_BACKEND STREQUAL "libsodium")
 else()
     message(FATAL_ERROR
             "Unknown SFT_CRYPTO_BACKEND: ${SFT_CRYPTO_BACKEND} "
-            "(expected monocypher, tweetnacl, or libsodium)")
+            "(expected monocypher or libsodium)")
 endif()
 
 message(STATUS "sft crypto backend: ${SFT_CRYPTO_BACKEND}")
