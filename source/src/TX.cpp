@@ -6,12 +6,43 @@ TX::TX(CMD_ARGS cmd) {
     filePath = cmdArgs.filePath;
 
     socketSetup();
+    handshake();
     transmit();
 }
 
 TX::~TX() {
+    // wipe key material before freeing the object's storage
+    Crypto::zeroize(this->sharedKey, sizeof(this->sharedKey));
     shutdown(this->connectFd, O_RDWR);
     close(this->connectFd);
+}
+
+// TX side of the handshake. RX writes its public key first, so we recv
+// before generating our own keypair — that way we don't waste entropy
+// generating an ephemeral key just to discover the peer hung up.
+void TX::handshake() {
+    Logging::logInfo("Performing handshake");
+
+    unsigned char peerPk[PUBKEY_SIZE];
+    if (!NetworkUtility::recvAll(this->connectFd, peerPk, PUBKEY_SIZE, PUBKEY_SIZE)) {
+        Logging::logError("Handshake failed - did not receive peer public key");
+        exit(1);
+    }
+
+    unsigned char myPk[PUBKEY_SIZE];
+    unsigned char mySk[SECRETKEY_SIZE];
+    Crypto::generateKeypair(myPk, mySk);
+
+    if (!NetworkUtility::sendAll(this->connectFd, myPk, PUBKEY_SIZE)) {
+        Crypto::zeroize(mySk, sizeof(mySk));
+        Logging::logError("Handshake failed - could not send public key");
+        exit(1);
+    }
+
+    Crypto::deriveSharedKey(mySk, peerPk, cmdArgs.passphrase, this->sharedKey);
+    Crypto::zeroize(mySk, sizeof(mySk));
+
+    Logging::logInfo("Handshake complete");
 }
 
 void TX::connectNow(sockaddr_in &serverAddr4, int &connectFd) {
@@ -127,12 +158,13 @@ void TX::transmit() const {
         fread(outboundDataBuffer, readSize, 1, inputFd);
         fileSize -= readSize;
 
-        // generate packet
-        auto packet = Packet::serialize(outboundDataBuffer, readSize);
+        // encrypt + frame this chunk
+        size_t frameLen = 0;
+        auto frame = Packet::serialize(outboundDataBuffer, readSize, this->sharedKey, frameLen);
         memset(outboundDataBuffer, 0, sizeof(outboundDataBuffer)); // reset outboundDataBuffer
 
         // send packet
-        auto success = NetworkUtility::sendAll(this->connectFd, packet.get(), readSize + 4);
+        auto success = NetworkUtility::sendAll(this->connectFd, frame.get(), frameLen);
         if (!success) {
             Logging::logError("Fatal error - Broken Socket");
             exit(1);
@@ -145,9 +177,12 @@ void TX::transmit() const {
         Logging::logProgress(fileInfo.st_size - fileSize, fileInfo.st_size, false);
     }
 
-    // send end packet
-    auto terminationPacket = Packet::generateTerminationPacket();
-    NetworkUtility::sendAll(this->connectFd, terminationPacket.get(), PACKET_HEADER_SIZE);
+    // end-of-stream marker: encrypted empty-payload frame. Authenticated by
+    // the same MAC mechanism as data frames, so an attacker cannot inject a
+    // fake one to truncate the transfer.
+    size_t termLen = 0;
+    auto terminationPacket = Packet::generateTerminationPacket(this->sharedKey, termLen);
+    NetworkUtility::sendAll(this->connectFd, terminationPacket.get(), termLen);
 
     // log complete
     Logging::logProgress(1, 1, true);

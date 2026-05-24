@@ -7,16 +7,50 @@ RX::RX(CMD_ARGS &cmd) {
     // initialize socket
     socketSetup();
 
+    // crypto handshake before any data flows
+    handshake();
+
     // receive file
     receive();
 }
 
 RX::~RX() {
+    // wipe key material before freeing the object's storage
+    Crypto::zeroize(this->sharedKey, sizeof(this->sharedKey));
     // shutdown sockets
     shutdown(this->listenFd, O_RDWR);
     close(this->listenFd);
     shutdown(this->connectFd, O_RDWR);
     close(this->connectFd);
+}
+
+// RX side of the handshake. RX writes its public key first because it's
+// the side that accepted the connection — the caller (TX) is waiting on
+// us to make the first move, mirroring the TCP roles.
+void RX::handshake() {
+    Logging::logInfo("Performing handshake");
+
+    unsigned char myPk[PUBKEY_SIZE];
+    unsigned char mySk[SECRETKEY_SIZE];
+    Crypto::generateKeypair(myPk, mySk);
+
+    if (!NetworkUtility::sendAll(this->connectFd, myPk, PUBKEY_SIZE)) {
+        Crypto::zeroize(mySk, sizeof(mySk));
+        Logging::logError("Handshake failed - could not send public key");
+        exit(1);
+    }
+
+    unsigned char peerPk[PUBKEY_SIZE];
+    if (!NetworkUtility::recvAll(this->connectFd, peerPk, PUBKEY_SIZE, PUBKEY_SIZE)) {
+        Crypto::zeroize(mySk, sizeof(mySk));
+        Logging::logError("Handshake failed - did not receive peer public key");
+        exit(1);
+    }
+
+    Crypto::deriveSharedKey(mySk, peerPk, cmdArgs.passphrase, this->sharedKey);
+    Crypto::zeroize(mySk, sizeof(mySk));
+
+    Logging::logInfo("Handshake complete");
 }
 
 void RX::socketSetup() {
@@ -64,7 +98,7 @@ void RX::receive() {
         exit(1);
     }
 
-    //receive until the other side does an orderly shutdown
+    //receive until the peer sends an encrypted empty-payload frame
     while (true) {
         // receive packet size header
         auto success = NetworkUtility::recvAll(this->connectFd, packetSizeBuf, PACKET_HEADER_SIZE, PACKET_HEADER_SIZE);
@@ -73,26 +107,42 @@ void RX::receive() {
             exit(1);
         }
 
-        // convert packet size header to int
+        // length covers nonce + MAC + ciphertext; the smallest valid frame
+        // is an empty payload (CRYPTO_OVERHEAD bytes)
         unsigned int packetSize = (packetSizeBuf[0] << 24) | (packetSizeBuf[1] << 16) | (packetSizeBuf[2] << 8) | packetSizeBuf[3];
-        if (packetSize == PACKET_TERMINATION_HEADER) {
-            Logging::logInfo("File received");
-            break;
+        if (packetSize < CRYPTO_OVERHEAD || packetSize > MAX_PACKET_SIZE + CRYPTO_OVERHEAD) {
+            Logging::logError("Fatal Error - implausible packet size");
+            exit(1);
         }
 
-        // receive packet
-        unsigned char packetBuf[packetSize];
-        success = NetworkUtility::recvAll(this->connectFd, packetBuf, packetSize, packetSize);
+        // receive the encrypted body
+        auto packetBuf = std::make_unique<unsigned char[]>(packetSize);
+        success = NetworkUtility::recvAll(this->connectFd, packetBuf.get(), packetSize, packetSize);
         if (!success) {
             Logging::logError("Fatal Error - Broken Socket");
             exit(1);
         }
 
-        // send read receipt
+        // decrypt + verify MAC. A failure here means either wire tampering
+        // or a passphrase mismatch — both are fatal.
+        size_t plainLen = 0;
+        auto plain = Crypto::decryptPacket(packetBuf.get(), packetSize, this->sharedKey, plainLen);
+        if (!plain) {
+            Logging::logError("Fatal Error - decryption failed (wrong passphrase or tampered data)");
+            exit(1);
+        }
+
+        // empty plaintext == end-of-stream marker
+        if (plainLen == 0) {
+            Logging::logInfo("File received");
+            break;
+        }
+
+        // send read receipt (plaintext lock-step pacing signal; not security-critical)
         send(this->connectFd, READ_RECEIPT, READ_RECEIPT_SIZE, 0);
 
-        // write to received buffer to file
-        fwrite(packetBuf, packetSize, 1, fdout);
+        // write decrypted payload to the buffer file
+        fwrite(plain.get(), plainLen, 1, fdout);
     }
 
     // close file

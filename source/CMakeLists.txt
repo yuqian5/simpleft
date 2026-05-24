@@ -27,6 +27,7 @@ ADD_EXECUTABLE(sft
         include/RX.hpp src/RX.cpp
         include/Transceiver.hpp src/Transceiver.cpp
         include/Packet.hpp src/Packet.cpp
+        include/Crypto.hpp src/Crypto.cpp
         include/Logging.hpp src/Logging.cpp
         include/NetworkUtility.hpp src/NetworkUtility.cpp
         include/sft_constants.hpp

@@ -1,47 +1,41 @@
 #include "../include/Packet.hpp"
 
-std::unique_ptr<unsigned char[]> Packet::serialize(const unsigned char* message, size_t size) {
-    if (size + 4 > 0xFFFFFFFF) throw std::runtime_error("Message too long!"); // assert message size is not longer than 4 bytes
+#include <cstring>
 
-    auto serialized = std::make_unique<unsigned char[]>(size + 4); // extra 4 bytes for length as int
+#include "../include/Crypto.hpp"
+#include "../include/sft_constants.hpp"
 
-    // set the first 4 bytes to the length of the message
-    serialized[0] = (size >> 24) & 0xFF;
-    serialized[1] = (size >> 16) & 0xFF;
-    serialized[2] = (size >> 8) & 0xFF;
-    serialized[3] = size & 0xFF;
+// Compose [4-byte BE length] [crypto body] into a single owning buffer.
+// `body` is consumed by this function; its size is encoded in the header.
+static std::unique_ptr<unsigned char[]> frame(
+        std::unique_ptr<unsigned char[]> body, size_t bodyLen,
+        size_t &outTotalLen) {
+    outTotalLen = PACKET_HEADER_SIZE + bodyLen;
+    auto out = std::make_unique<unsigned char[]>(outTotalLen);
 
-    // copy the message into the serialized array
-    std::copy_n(message, size, serialized.get()+4);
+    out[0] = (bodyLen >> 24) & 0xFF;
+    out[1] = (bodyLen >> 16) & 0xFF;
+    out[2] = (bodyLen >> 8) & 0xFF;
+    out[3] = bodyLen & 0xFF;
+    std::memcpy(out.get() + PACKET_HEADER_SIZE, body.get(), bodyLen);
 
-    return serialized;
+    return out;
 }
 
-Packet Packet::deserialize(char *message) {
-    unsigned int size =  (message[0] << 24) | (message[1] << 16) | (message[2] << 8) | message[3];
-
-    auto deserialized = new char[size];
-
-    std::copy_n(message+4, size, deserialized);
-
-    return {message, deserialized, size};
+std::unique_ptr<unsigned char[]> Packet::serialize(
+        const unsigned char *plaintext, size_t len,
+        const unsigned char *key,
+        size_t &out_total_len) {
+    size_t bodyLen = 0;
+    auto body = Crypto::encryptPacket(plaintext, len, key, bodyLen);
+    return frame(std::move(body), bodyLen, out_total_len);
 }
 
-std::unique_ptr<unsigned char[]> Packet::generateTerminationPacket() {
-    auto endPacket = std::make_unique<unsigned char[]>(4);
-    endPacket[0] = 0xFF;
-    endPacket[1] = 0xFF;
-    endPacket[2] = 0xFF;
-    endPacket[3] = 0xFF;
-
-    return endPacket;
+std::unique_ptr<unsigned char[]> Packet::generateTerminationPacket(
+        const unsigned char *key,
+        size_t &out_total_len) {
+    // Empty plaintext encrypts to [nonce(24)][MAC(16)] — 40 bytes. The
+    // length header advertises that, and the receiver decrypts it like any
+    // other frame; seeing an empty plaintext payload is the EOF signal.
+    return serialize(nullptr, 0, key, out_total_len);
 }
-
-Packet::Packet(char *serialized_message, char *deserialized_message, size_t length) {
-    this->serialized_message = serialized_message;
-    this->deserialized_message = deserialized_message;
-    this->length = length;
-
-}
-
-Packet::~Packet() = default;

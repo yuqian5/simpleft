@@ -1,11 +1,22 @@
 #ifndef FT_TX_HPP
 #define FT_TX_HPP
 
-#include <arpa/inet.h>ß
+#include <unistd.h>
+#include <iostream>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <cstring>
+#include <thread>
 
 #include "cli/CmdArgs.hpp"
 #include "Transceiver.hpp"
+#include "Crypto.hpp"
+#include "Packet.hpp"
 #include "Logging.hpp"
+#include "NetworkUtility.hpp"
+#include "sft_constants.hpp"
 
 class TX : protected Transceiver {
 public:
@@ -22,7 +33,11 @@ private:
     struct sockaddr_in serverAddr4;
     std::string filePath;
 
+    unsigned char sharedKey[SHARED_KEY_SIZE]{};
+
     void socketSetup(); // setup and connect to RX side
+
+    void handshake(); // exchange pubkeys with RX and derive sharedKey
 
     void transmit() const; // sending the file
 
@@ -32,4 +47,3 @@ private:
 };
 
 #endif //FT_TX_HPP
-
