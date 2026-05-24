@@ -14,16 +14,17 @@
  * change.
  *
  * Primitive contract (all backends must satisfy):
- *   * Curve25519 (or X25519) for ephemeral key agreement
- *   * SHA-512 to mix the passphrase into the derived key
+ *   * X25519 (Curve25519) for ephemeral key agreement
+ *   * A cryptographic hash with at least 32-byte output to mix the
+ *     passphrase into the derived key (TweetNaCl uses SHA-512, monocypher
+ *     uses BLAKE2b-256)
  *   * An AEAD with 24-byte nonce and 16-byte tag (XSalsa20-Poly1305,
  *     XChaCha20-Poly1305, or equivalent) for per-packet encryption
  *
- * Wire format does not depend on the backend - all buffer sizes are
- * fixed in sft_constants.hpp, so two endpoints can interoperate as long
- * as they pick AEADs with compatible nonce/tag sizes. Mixing TweetNaCl
- * (XSalsa20) with monocypher (XChaCha20) does NOT interop because the
- * stream ciphers differ.
+ * Wire frame layout (nonce/tag/ciphertext sizes) is the same across all
+ * backends, but the underlying stream cipher and KDF hash differ, so the
+ * derived key and ciphertext bytes are NOT interoperable across backends.
+ * Both endpoints must be built with the same SFT_CRYPTO_BACKEND.
  */
 class Crypto {
 public:

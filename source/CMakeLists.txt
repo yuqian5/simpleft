@@ -24,17 +24,22 @@ ENDIF (NOT TAR)
 # src/crypto/Crypto_<name>.cpp and implements every method of Crypto.hpp.
 # To add a new backend (e.g. monocypher, libsodium), drop in a new .cpp and
 # extend the conditional below.
-SET(SFT_CRYPTO_BACKEND "tweetnacl" CACHE STRING "Crypto backend to link (tweetnacl)")
-SET_PROPERTY(CACHE SFT_CRYPTO_BACKEND PROPERTY STRINGS tweetnacl)
+SET(SFT_CRYPTO_BACKEND "monocypher" CACHE STRING "Crypto backend to link (monocypher | tweetnacl)")
+SET_PROPERTY(CACHE SFT_CRYPTO_BACKEND PROPERTY STRINGS monocypher tweetnacl)
 
-IF (SFT_CRYPTO_BACKEND STREQUAL "tweetnacl")
+IF (SFT_CRYPTO_BACKEND STREQUAL "monocypher")
+    SET(SFT_CRYPTO_SOURCES
+            src/crypto/Crypto_monocypher.cpp
+            lib/monocypher/monocypher.c)
+    SET(SFT_CRYPTO_INCLUDE_DIRS lib/monocypher)
+ELSEIF (SFT_CRYPTO_BACKEND STREQUAL "tweetnacl")
     SET(SFT_CRYPTO_SOURCES
             src/crypto/Crypto_tweetnacl.cpp
             lib/tweetnacl/tweetnacl.c
             lib/tweetnacl/randombytes.c)
     SET(SFT_CRYPTO_INCLUDE_DIRS lib/tweetnacl)
 ELSE ()
-    MESSAGE(FATAL_ERROR "Unknown SFT_CRYPTO_BACKEND: ${SFT_CRYPTO_BACKEND}")
+    MESSAGE(FATAL_ERROR "Unknown SFT_CRYPTO_BACKEND: ${SFT_CRYPTO_BACKEND} (expected monocypher or tweetnacl)")
 ENDIF ()
 
 MESSAGE(STATUS "sft crypto backend: ${SFT_CRYPTO_BACKEND}")
