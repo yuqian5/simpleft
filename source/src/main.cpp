@@ -2,7 +2,7 @@
 
 #include "../include/TX.hpp"
 #include "../include/RX.hpp"
-#include "../include/misc.hpp"
+#include "../include/cli/ArgParser.hpp"
 #include "../include/Logging.hpp"
 
 int main(int argc, char *argv[]) {

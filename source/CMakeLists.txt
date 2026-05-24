@@ -25,13 +25,21 @@ ADD_EXECUTABLE(sft
         src/main.cpp
         include/TX.hpp src/TX.cpp
         include/RX.hpp src/RX.cpp
-        include/misc.hpp src/misc.cpp
         include/Transceiver.hpp src/Transceiver.cpp
         include/Packet.hpp src/Packet.cpp
         include/Logging.hpp src/Logging.cpp
         include/NetworkUtility.hpp src/NetworkUtility.cpp
         include/sft_constants.hpp
+        include/cli/CmdArgs.hpp
+        include/cli/ArgParser.hpp        src/cli/ArgParser.cpp
+        include/cli/IpFlag.hpp           src/cli/IpFlag.cpp
+        include/cli/PortFlag.hpp         src/cli/PortFlag.cpp
+        include/cli/PassphraseFlag.hpp   src/cli/PassphraseFlag.cpp
+        lib/tweetnacl/tweetnacl.c
+        lib/tweetnacl/randombytes.c
 )
+
+TARGET_INCLUDE_DIRECTORIES(sft PRIVATE lib/tweetnacl)
 
 # install
 INSTALL(TARGETS sft DESTINATION bin)

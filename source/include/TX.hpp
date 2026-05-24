@@ -1,21 +1,11 @@
 #ifndef FT_TX_HPP
 #define FT_TX_HPP
 
-#include <unistd.h>
-#include <iostream>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <cstring>
-#include <thread>
+#include <arpa/inet.h>ß
 
-#include "misc.hpp"
+#include "cli/CmdArgs.hpp"
 #include "Transceiver.hpp"
-#include "Packet.hpp"
 #include "Logging.hpp"
-#include "NetworkUtility.hpp"
-#include "sft_constants.hpp"
 
 class TX : protected Transceiver {
 public:
