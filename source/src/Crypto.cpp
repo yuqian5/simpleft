@@ -1,4 +1,4 @@
-// Implementation note — NaCl's zero-padding API:
+// Implementation note - NaCl's zero-padding API:
 //
 //   crypto_secretbox(c, m, mlen, n, k) requires that m starts with
 //   crypto_secretbox_ZEROBYTES (32) bytes of zeros, and writes
@@ -24,7 +24,7 @@
 extern "C" {
 #include "tweetnacl.h"
 
-// tweetnacl.h calls randombytes() but does not declare it — the embedder
+// tweetnacl.h calls randombytes() but does not declare it - the embedder
 // (us, in lib/tweetnacl/randombytes.c) is expected to supply it.
 void randombytes(unsigned char *x, unsigned long long xlen);
 }

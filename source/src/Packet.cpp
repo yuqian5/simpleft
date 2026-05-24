@@ -34,7 +34,7 @@ std::unique_ptr<unsigned char[]> Packet::serialize(
 std::unique_ptr<unsigned char[]> Packet::generateTerminationPacket(
         const unsigned char *key,
         size_t &out_total_len) {
-    // Empty plaintext encrypts to [nonce(24)][MAC(16)] — 40 bytes. The
+    // Empty plaintext encrypts to [nonce(24)][MAC(16)] - 40 bytes. The
     // length header advertises that, and the receiver decrypts it like any
     // other frame; seeing an empty plaintext payload is the EOF signal.
     return serialize(nullptr, 0, key, out_total_len);

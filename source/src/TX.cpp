@@ -18,7 +18,7 @@ TX::~TX() {
 }
 
 // TX side of the handshake. RX writes its public key first, so we recv
-// before generating our own keypair — that way we don't waste entropy
+// before generating our own keypair - that way we don't waste entropy
 // generating an ephemeral key just to discover the peer hung up.
 void TX::handshake() {
     Logging::logInfo("Performing handshake");

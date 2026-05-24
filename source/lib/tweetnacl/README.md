@@ -6,7 +6,7 @@ released into the public domain.
 
 Source: https://tweetnacl.cr.yp.to/20140427/
 
-These files are **not modified**. Do not edit them — if a newer upstream
+These files are **not modified**. Do not edit them - if a newer upstream
 release is published, replace both files wholesale.
 
 `randombytes.c` is a local file (not part of upstream TweetNaCl). TweetNaCl

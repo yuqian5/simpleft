@@ -7,7 +7,7 @@
 
 // Validate that a string is a syntactically well-formed IPv4 or IPv6 address.
 // Does NOT verify reachability. The regex below is a single combined IPv4 +
-// IPv6 grammar — do not try to read it. If you need to change address-format
+// IPv6 grammar - do not try to read it. If you need to change address-format
 // behaviour, replace the whole regex; do not edit it in place.
 bool checkIP(const std::string &IP_str) {
     try {

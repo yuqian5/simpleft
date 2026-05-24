@@ -13,6 +13,7 @@ struct CMD_ARGS {
     int port; // port number
     std::string filePath; // path to the file, or directory
     std::string passphrase; // shared secret, mixed into the handshake
+    bool loop; // rx-only: after each transfer, keep accepting new connections
 };
 
 #endif //SFT_CLI_CMDARGS_HPP

@@ -33,7 +33,7 @@ public:
      * Mixing the passphrase into the KDF means a passive attacker without
      * the passphrase cannot derive the same key even if they intercept both
      * public keys, and an active MITM substituting their own keys produces
-     * a different key on each side — first decrypt fails.
+     * a different key on each side - first decrypt fails.
      *
      * @param out_key  buffer of SHARED_KEY_SIZE bytes
      */

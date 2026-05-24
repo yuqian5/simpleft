@@ -9,7 +9,7 @@
 // Read a passphrase from stdin without echoing it.
 //
 // TTY path: disable the ECHO bit on stdin's termios, prompt, read a line,
-// restore the original termios. The restore MUST run on every exit path —
+// restore the original termios. The restore MUST run on every exit path -
 // otherwise the user's shell is left with echo off after sft exits. We
 // don't currently install a signal handler, so SIGINT during the prompt
 // will leave the terminal in no-echo state; the user can recover with

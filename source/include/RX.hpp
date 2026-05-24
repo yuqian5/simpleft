@@ -34,19 +34,34 @@ private:
     unsigned char sharedKey[SHARED_KEY_SIZE]{};
 
     /**
-     * setup, then listen and accept connection from TX side
+     * Open the listening socket, bind, and start listening. Runs once per
+     * process; the same listenFd is reused across loop iterations.
      */
-    void socketSetup();
+    void setupListen();
+
+    /**
+     * Block on accept() for one incoming connection. Sets connectFd.
+     * @return true on success, false if accept() failed
+     */
+    bool acceptConnection();
+
+    /**
+     * Close the per-transfer connection socket and mark it -1 so the
+     * destructor does not double-close.
+     */
+    void closeConnection();
 
     /**
      * exchange pubkeys with TX and derive sharedKey
+     * @return true on success, false on socket error
      */
-    void handshake();
+    bool handshake();
 
     /**
      * receive file name, file sha, file data. Write file data to a file created with the same file name
+     * @return true on success, false on socket / decryption error
      */
-    void receive();
+    bool receive();
 };
 
 #endif //FT_RX_HPP
