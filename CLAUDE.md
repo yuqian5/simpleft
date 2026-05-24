@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**simpleft** (`sft`) is a single-binary C++ command-line tool for peer-to-peer file transfer. There is no server; one side runs in receive mode (`rx`) and listens, the other side runs in transmit mode (`tx`) and connects. Traffic is end-to-end encrypted; a shared passphrase is required on both sides. The crypto backend is selectable at build time (`-DSFT_CRYPTO_BACKEND=monocypher` (default) or `tweetnacl`) - both endpoints must use the same backend because they ship with different stream ciphers and KDF hashes (see "Crypto layout" below). C++20, POSIX sockets, no system-installed third-party libraries. Builds on Linux and macOS (CI matrix: ubuntu-latest with gcc/clang, macos-latest with clang). Windows is not supported - the code uses `<sys/socket.h>`, `<arpa/inet.h>`, `<termios.h>`, and shells out to `tar`.
+**simpleft** (`sft`) is a single-binary C++ command-line tool for peer-to-peer file transfer. There is no server; one side runs in receive mode (`rx`) and listens, the other side runs in transmit mode (`tx`) and connects. Traffic is end-to-end encrypted; a shared passphrase is required on both sides. The crypto backend is selectable at build time via `SFT_CRYPTO_BACKEND` (one of `monocypher`, `tweetnacl`, `libsodium`); both endpoints must use the same backend because the AEAD ciphers differ (see "Crypto layout" below). The CMake configure step picks an **arch-aware default**: libsodium on x86_64 hosts that have it installed (where its SSE2/AVX2/AVX-512 ChaCha20 + Poly1305 paths run 2+ GB/s and crush everything else), monocypher otherwise. The reason: libsodium 1.0.x ships SIMD assembly for x86 only - on AArch64 (Apple Silicon, ARM servers) it falls back to portable C reference implementations and ends up ~10% slower than monocypher, which gets compiled into the binary with full LTO instead of going through a dylib. The configure log prints which default was chosen and why. C++20, POSIX sockets. The `monocypher` and `tweetnacl` backends are vendored with zero system dependencies; the `libsodium` backend is the single exception and requires a system-installed libsodium (`brew install libsodium` / `apt install libsodium-dev`). Builds on Linux and macOS (CI matrix: ubuntu-latest with gcc/clang, macos-latest with clang). Windows is not supported - the code uses `<sys/socket.h>`, `<arpa/inet.h>`, `<termios.h>`, and shells out to `tar`.
 
 ## Build
 
@@ -31,6 +31,7 @@ To switch backends:
 
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DSFT_CRYPTO_BACKEND=tweetnacl
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DSFT_CRYPTO_BACKEND=libsodium   # needs system libsodium via pkg-config
 ```
 
 The CMake configure step prints the selected backend (`-- sft crypto backend: ...`) - check that line before assuming a build is current. If you previously configured `build/` with a different backend, CMake caches the old value and *won't* pick up a new default in `CMakeLists.txt`; either pass `-DSFT_CRYPTO_BACKEND=...` explicitly or `rm -rf build` and reconfigure.
@@ -95,20 +96,24 @@ source/lib/tweetnacl/    (alternative backend)
 
 source/src/crypto/
 ├── Crypto_monocypher.cpp   (X25519 + BLAKE2b-256 + XChaCha20-Poly1305 + crypto_wipe)
-└── Crypto_tweetnacl.cpp    (X25519 + SHA-512 + XSalsa20-Poly1305 + handwritten zeroize)
+├── Crypto_tweetnacl.cpp    (X25519 + SHA-512 + XSalsa20-Poly1305 + handwritten zeroize)
+└── Crypto_libsodium.cpp    (X25519 + BLAKE2b-256 + XChaCha20-Poly1305 + sodium_memzero;
+                              requires system libsodium, no vendored sources)
 ```
 
 Neither `monocypher.h` nor `tweetnacl.h` has `extern "C"` guards; the corresponding `Crypto_*.cpp` is the only C++ file that includes them and each wraps the include in `extern "C" { ... }`. Do not edit upstream headers - replace whole files on upgrade.
 
 `Crypto_monocypher.cpp` has its own `/dev/urandom` reader (anonymous-namespace helper). The tweetnacl path uses the shared `randombytes` symbol from `lib/tweetnacl/randombytes.c`. Both abort on entropy failure - this is not a recoverable condition for a tool whose job is to encrypt traffic.
 
-Primitive mapping per backend (the two are NOT wire-compatible):
+Primitive mapping per backend (none of the three are wire-compatible with each other - both endpoints must build the same backend):
 
-| Step | monocypher | tweetnacl |
-|------|------------|-----------|
-| Ephemeral key agreement | X25519 (`crypto_x25519_public_key` + `crypto_x25519`) | X25519 via NaCl (`crypto_box_keypair`, `crypto_box_beforenm`) |
-| KDF hash mixing passphrase | BLAKE2b-256 (`crypto_blake2b`) | SHA-512[0:32] (`crypto_hash`) |
-| Per-packet AEAD | XChaCha20-Poly1305 (`crypto_aead_lock` / `crypto_aead_unlock`) | XSalsa20-Poly1305 (`crypto_secretbox` / `crypto_secretbox_open`) |
+| Step | monocypher | tweetnacl | libsodium |
+|------|------------|-----------|-----------|
+| Ephemeral key agreement | X25519 (`crypto_x25519_public_key` + `crypto_x25519`) | X25519 via NaCl (`crypto_box_keypair`, `crypto_box_beforenm`) | X25519 (`crypto_scalarmult_base` + `crypto_scalarmult`) |
+| KDF hash mixing passphrase | BLAKE2b-256 (`crypto_blake2b`) | SHA-512[0:32] (`crypto_hash`) | BLAKE2b-256 (`crypto_generichash`) |
+| Per-packet AEAD | XChaCha20-Poly1305 (`crypto_aead_lock` / `crypto_aead_unlock`) | XSalsa20-Poly1305 (`crypto_secretbox` / `crypto_secretbox_open`) | XChaCha20-Poly1305 (`crypto_secretbox_xchacha20poly1305_easy` / `_open_easy`) |
+
+The libsodium backend produces the same derived key as the monocypher backend given identical inputs (same X25519 + BLAKE2b), and both use XChaCha20-Poly1305 with the same wire framing, so in principle the two are interoperable on the AEAD. We do not officially support mixing them - subtle differences (e.g. libsodium's hardware-accelerated paths, or future API churn) could break it - but if you observe a successful transfer between a libsodium TX and a monocypher RX (or vice versa), that is by design, not an accident.
 
 ### Wire protocol (see `Packet.cpp`, `Crypto.cpp`, `sft_constants.hpp`)
 
