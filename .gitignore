@@ -6,3 +6,4 @@ cmake-build-*/
 *.out
 lanft
 ubuntu_setup_env.sh
+build

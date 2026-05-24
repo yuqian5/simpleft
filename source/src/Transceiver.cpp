@@ -1,29 +1,38 @@
 #include "../include/Transceiver.hpp"
 
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/wait.h>
+#include <stdexcept>
+
 bool Transceiver::packFile(const std::string &path) {
-    char cmdOutputBuf[512];
-    memset(cmdOutputBuf, 0, sizeof(cmdOutputBuf));
-
-    std::string result;
-
-    std::string cmd = "tar -cf .ft_temp_pack.tar.gz " + path + " 2>&1";
-    FILE *pipe = popen(cmd.c_str(), "r");
-
-    if (!pipe) {
-        throw std::runtime_error("popen() failed!");
+    pid_t pid = fork();
+    if (pid < 0) {
+        throw std::runtime_error("fork() failed");
     }
 
-    fgets(cmdOutputBuf, sizeof(cmdOutputBuf), pipe);
-    result += cmdOutputBuf;
-    pclose(pipe);
-
-    // check if tar operation failed, if yes, remove temp file and return false
-    if (result.find("No such file") != std::string::npos) {
-        pipe = popen("rm .ft_temp_pack.tar.gz", "r");
-        pclose(pipe);
-        return false;
+    if (pid == 0) {
+        int devnull = open("/dev/null", O_WRONLY);
+        if (devnull >= 0) {
+            dup2(devnull, STDOUT_FILENO);
+            dup2(devnull, STDERR_FILENO);
+            close(devnull);
+        }
+        execlp("tar", "tar", "-cf", ".ft_temp_pack.tar.gz", path.c_str(), nullptr);
+        _exit(127);
     }
-    return true;
+
+    int status;
+    if (waitpid(pid, &status, 0) < 0) {
+        throw std::runtime_error("waitpid() failed");
+    }
+
+    if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+        return true;
+    }
+
+    unlink(".ft_temp_pack.tar.gz");
+    return false;
 }
 
 void Transceiver::unpackFile() {

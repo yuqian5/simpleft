@@ -43,7 +43,7 @@ void TX::connectNow(sockaddr_in6 &serverAddr6, int &connectFd) {
 
     while (tries_left > 0) {
         //struct setup
-        if (connect(connectFd, (struct sockaddr *) &serverAddr6, sizeof(serverAddr6)) < 0) {
+        if (connect(connectFd, reinterpret_cast<sockaddr*>(&serverAddr6), sizeof(serverAddr6)) < 0) {
             tries_left -= 1;
             if (!tries_left) {
                 Logging::logError("Connection failed, no receiver found");
@@ -90,7 +90,7 @@ void TX::socketSetup() {
 }
 
 void TX::transmit() const {
-    // pack file
+    // pack file into tar ball
     Logging::logInfo("Packaging file(s)");
     if (!packFile(cmdArgs.filePath)) {
         Logging::logError("No such file or directory");
@@ -117,8 +117,7 @@ void TX::transmit() const {
 
     // send file
     Logging::logInfo("Sending file(s)");
-    unsigned char outboundDataBuffer[MAX_PACKET_SIZE];
-    memset(outboundDataBuffer, 0, sizeof(outboundDataBuffer));
+    unsigned char outboundDataBuffer[MAX_PACKET_SIZE] = {};
 
     size_t fileSize = fileInfo.st_size;
 
